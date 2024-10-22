@@ -79,19 +79,15 @@ if st.session_state["logged_in_user"] == "shivaan":
     navigation = st.radio("Job Navigation", ["All Jobs", "Add Job"], horizontal=True)
     if navigation == "All Jobs":
         st.subheader("All Jobs")
-        job_production.display_data()
+        job_production.display_data(displaytype=1)
         job_production.overdue_jobs()
     elif navigation == "Add Job":
         job_production.add_job()
 
 elif st.session_state["logged_in_user"] == "ellis":
-    navigation = st.radio("Job Navigation", ["All Jobs", "Update Job"], horizontal=True)
-    if navigation == "All Jobs":
-        st.subheader("All Jobs")
-        job_production.display_data(displaytype=2)
-        job_production.overdue_jobs()
-    elif navigation == "Update Job":
-        job_production.update_job()
+    st.subheader("All Jobs")
+    job_production.display_data(displaytype=2)
+    job_production.overdue_jobs()
 
 # Jobs overdue
 

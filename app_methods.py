@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 import streamlit as st
-from st_aggrid import AgGrid, ColumnsAutoSizeMode, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 
 class Production:
@@ -27,12 +27,57 @@ class Production:
         if st.button("Refresh Table"):
             st.rerun()
 
-        if displaytype == 2:
+        def update_job(display_job, status_update):
+            # Create grid options
+            gb = GridOptionsBuilder.from_dataframe(display_job)
+            gb.configure_selection(
+                "multiple", use_checkbox=True
+            )  # Enable single row selection
+            grid_options = gb.build()
+
+            # Display the grid
+            grid_response = AgGrid(
+                display_job, gridOptions=grid_options, enable_enterprise=False
+            )
+
+            # Get selected row data
+            selected_rows = pd.DataFrame(grid_response.get("selected_rows", []))
+            # st.write(selected_rows)
+
+            # Ensure selected_rows is not empty
+            if not selected_rows.empty:  # Check if there's at least one selected row
+                task_id = selected_rows["Job ID"].tolist()
+
+                # Create a form to edit the status
+                with st.form(key="edit_status_form"):
+                    new_status = status_update
+                    submit_button = st.form_submit_button(label="Update Status")
+
+                    if submit_button:
+                        # Update the task's status (You would typically update your data structure here)
+                        for j_id in task_id:
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["Job ID"] == j_id,
+                                new_status,
+                                self.jobs_df["Status"],
+                            )
+                            self.jobs_df.loc[
+                                self.jobs_df["Job ID"] == j_id, "JobCompletedTime"
+                            ] = {self.today}
+                            self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
+                        st.success("Job has been updated")
+                        time.sleep(1)
+                        st.rerun()
+
+        if displaytype == 1:
+            pending_jobs = self.jobs_df.loc[self.jobs_df["Status"] == "Pending"].copy()
+            update_job(pending_jobs, "In Progress")
+        elif displaytype == 2:
             jobs_todo = self.jobs_df.loc[
-                self.jobs_df["Progress"] != 100,
+                self.jobs_df["Status"] == "In Progress",
                 ["Job ID", "Company", "Description", "Size", "Status", "Deadline"],
             ].copy()
-            AgGrid(jobs_todo, height=200, fit_columns_on_grid_load=True)
+            update_job(jobs_todo, "Completed")
         else:
             AgGrid(data=self.jobs_df, height=200, fit_columns_on_grid_load=True)
 
@@ -76,35 +121,9 @@ class Production:
             time.sleep(1)
             st.rerun()
 
-    def update_job(self):
-        self.format_data()
-        # Job status and progress update
-        st.subheader("Update Job Status")
-        selected_job = st.selectbox("Select Job to Update", self.jobs_df["Job ID"])
-        self.new_status = st.selectbox(
-            "Update Status", ["Pending", "In Progress", "Completed"]
-        )
-        if st.button("Update Status"):
-            self.jobs_df.loc[self.jobs_df["Job ID"] == selected_job, "Status"] = (
-                self.new_status
-            )
-            self.jobs_df.loc[
-                self.jobs_df["Job ID"] == selected_job, "JobCompletedTime"
-            ] = {self.today}
-            self.jobs_df.loc[self.jobs_df["Job ID"] == selected_job, "Progress"] = (
-                0
-                if self.new_status == "Pending"
-                else 50 if self.new_status == "In Progress" else 100
-            )
-            self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
-            st.success(f"Job {selected_job} updated!")
-            time.sleep(1)
-            st.rerun()
-
     def overdue_jobs(self):
         # Check overdue jobs
         st.subheader("Overdue Jobs")
-        today = dt.date.today()
         overdue_jobs = self.jobs_df[
             (self.jobs_df["Deadline"] < self.today)
             & (self.jobs_df["Status"] != "Completed")
