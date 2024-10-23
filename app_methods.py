@@ -27,10 +27,6 @@ class Production:
         if st.button("Refresh Table"):
             st.rerun()
 
-        if displaytype == 2:
-            time.sleep(5)
-            st.rerun()
-
         def update_job(display_job, status_update):
             # Create grid options
             gb = GridOptionsBuilder.from_dataframe(display_job)
