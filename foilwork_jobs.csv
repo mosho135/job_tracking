@@ -1,5 +1,5 @@
 Job ID,Company,Description,Size,EstimateTime,Status,Progress,JobAddedTime,Deadline,JobCompletedTime
-A1,Jumping Jack,Widget Assembly,(300x200),02:00:00,Pending,0,2024/10/13,2024-10-20 00:00:00,
-A2,Bomberman,Gadget Construction,(400x600),01:00:00,In Progress,50,2024/10/14,2024-10-22 00:00:00,
-A3,Sprite,Device Packaging,(500x300),02:30:00,Completed,100,2024/10/15,2024-10-15 00:00:00,2024-10-15 14:00:00
-A4,Bunny Chow,Making Curry,(300x400),02:30:00,Completed,100,2024-10-19 13:31:38,2024-10-24 03:00:00,2024-10-19 13:32:15
+A1,Jumping Jack,Widget Assembly,(300x200),02:00:00,Pending,0,2024/10/13,2024/10/20 00:00,
+A2,Bomberman,Gadget Construction,(400x600),01:00:00,Pending,50,2024/10/14,2024/10/22 00:00,
+A3,Sprite,Device Packaging,(500x300),02:30:00,Pending,100,2024/10/15,2024/10/15 00:00,
+A4,Bunny Chow,Making Curry,(300x400),02:30:00,Pending,100,2024/10/19 13:31,2024/10/24 03:00,
