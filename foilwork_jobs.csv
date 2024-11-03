@@ -1,5 +1,9 @@
-Job ID,Company,Description,Size,EstimateTime,Status,Progress,JobAddedTime,Deadline,JobCompletedTime
-A1,Jumping Jack,Widget Assembly,(300x200),02:00:00,Pending,0,2024/10/13,2024/10/20 00:00,
-A2,Bomberman,Gadget Construction,(400x600),01:00:00,Pending,50,2024/10/14,2024/10/22 00:00,
-A3,Sprite,Device Packaging,(500x300),02:30:00,Pending,100,2024/10/15,2024/10/15 00:00,
-A4,Bunny Chow,Making Curry,(300x400),02:30:00,Pending,100,2024/10/19 13:31,2024/10/24 03:00,
+Job ID,Client,ClientType,JobName,Size,Material,MachineTime,Status,Progress,JobAddedTime,EstimatedDeliveryDate,DTPOperator,CODStatus,CODPaymentTime,ArtworkCompleteTime,CNCStartTime,CNCCompleteTime,FinishingCompleteTime,JobCompletedTime
+1,Jumping Jack,COD,Widget Assembly,(300x200),,02:00:00,Artwork,0,2024/10/13,2024/10/20 00:00,Shivaan Hess,Paid,,,,,,
+2,Bomberman,Account,Gadget Construction,(400x600),,01:00:00,Artwork,50,2024/10/14,2024/10/22 00:00,Shivaan Hess,Not Applicable,,,,,,
+3,Sprite,Account,Device Packaging,(500x300),,02:30:00,Artwork,100,2024/10/15,2024/10/15 00:00,Shivaan Hess,Not Applicable,,,,,,
+4,Bunny Chow,Account,Making Curry,(300x400),,02:30:00,Artwork,100,2024/10/19 13:31,2024/10/24 03:00,Marlene Celliers,Not Applicable,,,,,,
+6,Bunny Chow,Account,Making Curry,(300x400),,19:03:00,Artwork,0,2024/10/30 19:03,2024/10/31 19:03,Marlene Celliers,Not Applicable,,,,,,
+7,Juice,COD,Something,(400x400),,19:03:00,Artwork,0,2024/10/30 19:03,2024/10/31 19:03,Marlene Celliers,Paid,,,,,,
+8895,MCC,Account,Nederburg,214 x 155mm,Brass,01:00:00,Artwork,0,2024/10/30 19:27,2024/10/31 10:00,Marlene Celliers,Not Applicable,,,,,,
+8976,Label Mountain,Account,Bobbejaan,200x121,Brass,18:49:00,Artwork,,2024/11/03 18:49,2024/11/03 18:49,Shivaan Hess,Not Applicable,,,,,,

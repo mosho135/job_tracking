@@ -1,6 +1,8 @@
 import os
 import sys
 
+import pandas as pd
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import hmac
 
@@ -75,19 +77,31 @@ else:
 
 job_production = Production()
 
-if st.session_state["logged_in_user"] == "shivaan":
+user_df = pd.read_csv("foilworx_userlist.csv")
+
+# Get the display type from the user sheet
+user_display_type = user_df.loc[
+    user_df["username"] == st.session_state["logged_in_user"], "usertype"
+].sum()
+
+# Get the fullname from the user sheet
+full_name = user_df.loc[
+    user_df["username"] == st.session_state["logged_in_user"], "fullname"
+].sum()
+
+if user_display_type == 1:
+    job_production.display_data(displaytype=user_display_type, fullname=full_name)
+elif user_display_type == 2:
     navigation = st.radio("Job Navigation", ["All Jobs", "Add Job"], horizontal=True)
     if navigation == "All Jobs":
-        st.subheader("All Jobs")
-        job_production.display_data(displaytype=1)
-        job_production.overdue_jobs()
+        job_production.display_data(displaytype=user_display_type, fullname=full_name)
+        # job_production.overdue_jobs()
     elif navigation == "Add Job":
-        job_production.add_job()
+        job_production.add_job(fullname=full_name)
 
-elif st.session_state["logged_in_user"] == "ellis":
-    st.subheader("All Jobs")
-    job_production.display_data(displaytype=2)
-    job_production.overdue_jobs()
+else:
+    job_production.display_data(displaytype=user_display_type, fullname=full_name)
+    # job_production.overdue_jobs()
 
 # Jobs overdue
 

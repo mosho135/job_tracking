@@ -1,0 +1,8 @@
+StatusID,Status
+1,Artwork
+2,Machining (Not Processed)
+3,Machining (In Process)
+4,At Finishing
+5,Waiting payment (COD)
+6,Ready for Delivery
+7,Delivered
