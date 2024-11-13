@@ -18,10 +18,11 @@ class Production:
     def __init__(self):
         self.df = pd.read_csv("foilwork_jobs.csv", encoding="latin-1", low_memory=False)
         self.jobs_df = pd.DataFrame()
-        self.today = pd.to_datetime(dt.datetime.today().strftime("%Y/%m/%d %H:%M:%S"))
+        self.today = pd.to_datetime(dt.datetime.today().strftime("%Y/%m/%d %H:%M"))
         self.new_status = ""
 
     def format_data(self):
+        self.df["JobAddedTime"] = pd.to_datetime(self.df["JobAddedTime"])
         self.df["MachineTime"] = pd.to_datetime(
             self.df["MachineTime"], format="%H:%M:%S"
         ).dt.time
@@ -43,13 +44,12 @@ class Production:
         from streamlit_extras.metric_cards import style_metric_cards
 
         self.format_data()
-
         if displaytype in (1, 2):
             cost_df = self.jobs_df[["TotalCost", "JobAddedTime"]].copy()
             cost_df["JobAddedTime"] = pd.to_datetime(
-                pd.to_datetime(cost_df["JobAddedTime"]).dt.strftime("%Y-%m-%d")
+                pd.to_datetime(cost_df["JobAddedTime"]).dt.strftime("%Y/%m/%d")
             )
-            date_default = pd.to_datetime(self.today.strftime("%Y-%m-%d"))
+            date_default = pd.to_datetime(self.today.strftime("%Y/%m/%d"))
             date1, date2 = st.columns(2)
             with date1:
                 start_date = st.date_input("Start Date", value=date_default)
