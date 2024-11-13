@@ -4,16 +4,14 @@ import time
 import numpy as np
 import pandas as pd
 import streamlit as st
+from pandas.core.api import to_datetime
 from st_aggrid import AgGrid, GridOptionsBuilder
 from streamlit_option_menu import option_menu
 
-# TODO: Add the name of the DTP when adding a job
 # TODO: Add a delete job button.
-# TODO: Add an admin page for display 1.
-# TODO: Add in section for the total numner. Need to check at what point this is displayed.
-# TODO: Find a better way to edit the data and update.
 # TODO: Add in a download button for the data.
-# TODO: Create auto saves for the data so that it doesn't get lost
+# TODO: Add another user that displays jobs that are ready to cut. (Figure out the auto refesh)
+# TODO: Add ability to change the material on approved artwork.
 
 
 class Production:
@@ -37,6 +35,7 @@ class Production:
         self.df["FinishingCompleteTime"] = pd.to_datetime(
             self.df["FinishingCompleteTime"]
         )
+        self.df["ProofApprovalTime"] = pd.to_datetime(self.df["ProofApprovalTime"])
         self.df["JobCompletedTime"] = pd.to_datetime(self.df["JobCompletedTime"])
         self.jobs_df = self.df.copy()
 
@@ -44,6 +43,30 @@ class Production:
         from streamlit_extras.metric_cards import style_metric_cards
 
         self.format_data()
+
+        if displaytype in (1, 2):
+            cost_df = self.jobs_df[["TotalCost", "JobAddedTime"]].copy()
+            cost_df["JobAddedTime"] = pd.to_datetime(
+                pd.to_datetime(cost_df["JobAddedTime"]).dt.strftime("%Y-%m-%d")
+            )
+            date_default = pd.to_datetime(self.today.strftime("%Y-%m-%d"))
+            date1, date2 = st.columns(2)
+            with date1:
+                start_date = st.date_input("Start Date", value=date_default)
+            with date2:
+                end_date = st.date_input("End Date", value=date_default)
+
+            cost_selection = cost_df.query(
+                "JobAddedTime>=@start_date & JobAddedTime<=@end_date"
+            )
+
+            # st.dataframe(cost_selection)
+            st.metric(
+                label="Invoice Total", value=cost_selection["TotalCost"].sum(), delta=""
+            )
+            st.header("")
+
+        # Refresh button for all users
         if st.button("Refresh Table"):
             st.rerun()
 
@@ -55,6 +78,11 @@ class Production:
         pending_jobs = self.jobs_df.loc[
             (self.jobs_df["Status"] == "Artwork")
             & (self.jobs_df["DTPOperator"] == fullname)
+        ].copy()
+
+        # Waiting Proof approval data
+        proof_approval = self.jobs_df.loc[
+            self.jobs_df["Status"] == "Waiting Approval"
         ].copy()
 
         # Jobs waiting COD Payment
@@ -86,6 +114,78 @@ class Production:
         # Delivery Jobs
         delivered_jobs = self.jobs_df.loc[self.jobs_df["Status"] == "Delivered"].copy()
 
+        # Get the current machine in use
+        def machineinuse(df, mac_color, output_need):
+            mac_df = df.loc[
+                (df["MachineInUse"] == mac_color)
+                & (df["Status"] == "Machining (In Process)")
+            ].copy()
+
+            if output_need == "count":
+                mac_count = mac_df["MachineInUse"].count()
+                return mac_count
+            elif output_need == "invoice":
+                job_list = mac_df["Inv No"].tolist()
+                if len(job_list) == 1:
+                    mac_invoice = mac_df["Inv No"].sum()
+                    return str(mac_invoice)
+                elif len(job_list) > 1:
+                    mac_invoice = ""
+                    for inv in job_list:
+                        mac_invoice = mac_invoice + " | " + str(inv)
+                    return mac_invoice
+
+        def machine_metrics(metric_display_type):
+            if metric_display_type == "normal":
+                red_col, blue_col, yellow_col, purple_col = st.columns(4)
+                red_col.metric(
+                    label="Machine - Red",
+                    value=machineinuse(self.jobs_df, "Red", "count"),
+                    delta=machineinuse(self.jobs_df, "Red", "invoice"),
+                )
+                blue_col.metric(
+                    label="Machine - Blue",
+                    value=machineinuse(self.jobs_df, "Blue", "count"),
+                    delta=machineinuse(self.jobs_df, "Blue", "invoice"),
+                )
+                yellow_col.metric(
+                    label="Machine - Yellow",
+                    value=machineinuse(self.jobs_df, "Yellow", "count"),
+                    delta=machineinuse(self.jobs_df, "Yellow", "invoice"),
+                )
+                purple_col.metric(
+                    label="Machine - Purple",
+                    value=machineinuse(self.jobs_df, "Purple", "count"),
+                    delta=machineinuse(self.jobs_df, "Purple", "invoice"),
+                )
+            elif metric_display_type == "sidebar":
+                st.sidebar.metric(
+                    label="Machine - Red",
+                    value=machineinuse(self.jobs_df, "Red", "count"),
+                    delta=machineinuse(self.jobs_df, "Red", "invoice"),
+                )
+                st.sidebar.metric(
+                    label="Machine - Blue",
+                    value=machineinuse(self.jobs_df, "Blue", "count"),
+                    delta=machineinuse(self.jobs_df, "Blue", "invoice"),
+                )
+                st.sidebar.metric(
+                    label="Machine - Yellow",
+                    value=machineinuse(self.jobs_df, "Yellow", "count"),
+                    delta=machineinuse(self.jobs_df, "Yellow", "invoice"),
+                )
+                st.sidebar.metric(
+                    label="Machine - Purple",
+                    value=machineinuse(self.jobs_df, "Purple", "count"),
+                    delta=machineinuse(self.jobs_df, "Purple", "invoice"),
+                )
+
+            style_metric_cards(
+                background_color="#ffffff",
+                border_left_color="#18334C",
+                box_shadow=True,
+            )
+
         # Check the display types and display to the user
         if displaytype == 1:
             with st.sidebar:
@@ -94,9 +194,11 @@ class Production:
                     options=["Production Dashboard", "My Jobs"],
                     icons=["book", "book"],
                     menu_icon="cast",
-                    default_index=0,
+                    # default_index=0,
                     orientation="vertical",
                 )
+
+            machine_metrics("sidebar")
 
             if selected == "Production Dashboard":
                 st.subheader("DASHBOARD")
@@ -209,17 +311,27 @@ class Production:
 
         elif displaytype == 2:
             # Display Jobs per DTP Operator
-            at_col1, at_col2 = st.columns(2)
+            at_col1, at_col2, at_col3 = st.columns(3)
             at_col1.metric(
                 label="All Current Artwork Jobs",
                 value=pending_jobs["Status"].count(),
                 delta="",
             )
             at_col2.metric(
+                label="Waiting Proof Approval",
+                value=proof_approval["Status"].count(),
+                delta="",
+            )
+            at_col3.metric(
                 label="Jobs Waiting COD Payement",
                 value=waiting_cod_payment["Status"].count(),
                 delta="",
             )
+
+            # Get the machine in use metrics
+            st.sidebar.subheader("Machines Currently in Use")
+            machine_metrics("sidebar")
+
             style_metric_cards(
                 background_color="#ffffff",
                 border_left_color="#18334C",
@@ -228,15 +340,22 @@ class Production:
 
             at_radio = st.radio(
                 label="Current Job Navigation",
-                options=["Artwork Jobs", "Waiting COD Payment"],
+                options=[
+                    "Artwork Jobs",
+                    "Waiting Proof Approval",
+                    "Waiting COD Payment",
+                ],
                 horizontal=True,
             )
 
             if at_radio == "Artwork Jobs":
                 # Display Current Artwork Jobs
                 st.subheader("All Current Jobs")
+                self.update_job(pending_jobs, "Waiting Approval", "artwork_grid")
+            elif at_radio == "Waiting Proof Approval":
+                st.subheader("Waiting Proof Approval")
                 self.update_job(
-                    pending_jobs, "Machining (Not Processed)", "artwork_grid"
+                    proof_approval, "Machining (Not Processed)", "proof_grid"
                 )
             elif at_radio == "Waiting COD Payment":
                 st.subheader("Waiting COD Payment")
@@ -320,90 +439,154 @@ class Production:
 
         # Ensure selected_rows is not empty
         if not selected_rows.empty:  # Check if there's at least one selected row
-            task_id = selected_rows["Job ID"].tolist()
+            task_id = selected_rows["Inv No"].tolist()
 
             # Create a form to edit the status
             with st.form(key="edit_status_form"):
                 new_status = status_update
+                machine_choice = ""
+                total_cost = 0
+                current_material = self.jobs_df.loc[
+                    self.jobs_df["Inv No"] == task_id[0], "Material"
+                ].sum()
+                material_change = ""
+                if new_status == "Machining (Not Processed)":
+                    total_cost = st.number_input("Job Cost")
+                    material_change = st.text_input(
+                        label="Material", value=current_material
+                    )
+
+                if new_status == "Machining (In Process)":
+                    machine_choice = st.selectbox(
+                        "Choose Machine", ["Red", "Blue", "Yellow", "Purple"]
+                    )
                 submit_button = st.form_submit_button(label="Update Status")
 
                 if submit_button:
                     for j_id in task_id:
-                        if new_status == "Machining (Not Processed)":
+                        current_status = self.jobs_df.loc[
+                            self.jobs_df["Inv No"] == j_id, "Status"
+                        ].sum()
+                        if new_status == "Waiting Approval":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "ArtworkCompleteTime"
+                                self.jobs_df["Inv No"] == j_id, "ProofApprovalTime"
+                            ] = {self.today}
+                        elif new_status == "Machining (Not Processed)":
+                            self.jobs_df["TotalCost"] = np.where(
+                                self.jobs_df["Inv No"] == j_id,
+                                total_cost,
+                                self.jobs_df["TotalCost"],
+                            )
+                            self.jobs_df["Material"] = np.where(
+                                self.jobs_df["Inv No"] == j_id,
+                                material_change,
+                                self.jobs_df["Material"],
+                            )
+                            self.jobs_df["Proof"] = np.where(
+                                self.jobs_df["Inv No"] == j_id,
+                                "Approved",
+                                self.jobs_df["Proof"],
+                            )
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["Inv No"] == j_id,
+                                new_status,
+                                self.jobs_df["Status"],
+                            )
+                            self.jobs_df.loc[
+                                self.jobs_df["Inv No"] == j_id, "ArtworkCompleteTime"
                             ] = {self.today}
                         elif new_status == "Machining (In Process)":
+                            self.jobs_df["MachineInUse"] = np.where(
+                                self.jobs_df["Inv No"] == j_id,
+                                machine_choice,
+                                self.jobs_df["MachineInUse"],
+                            )
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "CNCStartTime"
+                                self.jobs_df["Inv No"] == j_id, "CNCStartTime"
                             ] = {self.today}
                         elif new_status == "At Finishing":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "CNCCompleteTime"
+                                self.jobs_df["Inv No"] == j_id, "CNCCompleteTime"
                             ] = {self.today}
                         elif new_status == "Ready for Delivery":
                             cod_current_status = self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "CODStatus"
+                                self.jobs_df["Inv No"] == j_id, "CODStatus"
                             ].sum()
                             if cod_current_status == "Not Paid":
                                 new_status = "Waiting payment (COD)"
 
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "FinishingCompleteTime"
+                                self.jobs_df["Inv No"] == j_id, "FinishingCompleteTime"
                             ] = {self.today}
                         elif new_status == "Paid":
-                            current_status = self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "Status"
-                            ].sum()
                             self.jobs_df["CODStatus"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["CODStatus"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "CODPaymentTime"
+                                self.jobs_df["Inv No"] == j_id, "CODPaymentTime"
                             ] = {self.today}
                             if current_status == "Waiting payment (COD)":
                                 new_status = "Ready for Delivery"
                                 self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["Job ID"] == j_id,
+                                    self.jobs_df["Inv No"] == j_id,
                                     new_status,
                                     self.jobs_df["Status"],
                                 )
 
                         elif new_status == "Delivered":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Job ID"] == j_id,
+                                self.jobs_df["Inv No"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Job ID"] == j_id, "JobCompletedTime"
+                                self.jobs_df["Inv No"] == j_id, "JobCompletedTime"
                             ] = {self.today}
                         self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
                     st.success("Job has been updated")
                     time.sleep(1)
                     st.rerun()
+
+                if new_status in (
+                    "Artwork",
+                    "Waiting Approval",
+                    "Machining (Not Processed)",
+                ):
+                    delete_button = st.form_submit_button(label="Delete Job")
+                    if delete_button:
+                        for i_id in task_id:
+                            jobs_to_delete = self.jobs_df.loc[
+                                self.jobs_df["Inv No"] == i_id
+                            ].index
+                            # Check the below code and if it works
+                            self.jobs_df = self.jobs_df.drop(jobs_to_delete, axis=0)
+
+                        self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
+                        st.success("Job has been deleted")
+                        time.sleep(1)
+                        st.rerun()
 
     def add_job(self, fullname):
         # Add a new job
@@ -411,7 +594,7 @@ class Production:
         st.subheader("Add New Job")
         fr_col1, fr_col2 = st.columns(2)
         with fr_col1:
-            job_id = st.text_input("Job ID - Leave empty to auto increment number")
+            job_id = st.text_input("Inv No - Leave empty to auto increment number")
         with fr_col2:
             client = st.text_input("Client")
 
@@ -456,14 +639,20 @@ class Production:
             "%Y-%m-%d %H:%M:%S"
         )
 
+        cc_col1, cc_col2 = st.columns(2)
+        with cc_col1:
+            job_priority = st.selectbox("Priority", ["Normal", "Urgent"])
+        with cc_col2:
+            job_cost = st.number_input("Job Cost")
+
         if st.button("Add Job"):
             if not job_id:
-                j_list = self.jobs_df["Job ID"].unique().tolist()
+                j_list = self.jobs_df["Inv No"].unique().tolist()
                 j_list.sort()
                 job_id = j_list[-1] + 1
 
             new_job = {
-                "Job ID": [job_id],
+                "Inv No": [job_id],
                 "Client": [client],
                 "ClientType": [client_type],
                 "JobName": [jobname],
@@ -473,11 +662,10 @@ class Production:
                 "EstimatedDeliveryDate": [deadline],
                 "Status": [status],
                 "CODStatus": [cod_status],
-                # "Progress": [
-                #     0 if status == "Pending" else 50 if status == "In Progress" else 100
-                # ],
                 "DTPOperator": [fullname],
                 "JobAddedTime": [self.today],
+                "JobPriority": [job_priority],
+                "TotalCost": [job_cost],
             }
             new_job_df = pd.DataFrame(new_job)
             self.jobs_df = pd.concat([self.jobs_df, new_job_df], ignore_index=True)
