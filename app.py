@@ -9,9 +9,9 @@ import hmac
 import streamlit as st
 from streamlit_js_eval import streamlit_js_eval
 
-from app_methods import Production
-
 st.set_page_config(page_title="Job Tracking", page_icon="🌎", layout="wide")
+
+from app_methods import Production
 
 
 def check_password():
@@ -92,21 +92,6 @@ full_name = user_df.loc[
 if user_display_type == 1:
     job_production.display_data(displaytype=user_display_type, fullname=full_name)
 elif user_display_type == 2:
-    navigation = st.radio("Job Navigation", ["All Jobs", "Add Job"], horizontal=True)
-    if navigation == "All Jobs":
-        job_production.display_data(displaytype=user_display_type, fullname=full_name)
-        # job_production.overdue_jobs()
-    elif navigation == "Add Job":
-        job_production.add_job(fullname=full_name)
-
+    job_production.display_data(displaytype=user_display_type, fullname=full_name)
 else:
     job_production.display_data(displaytype=user_display_type, fullname=full_name)
-    # job_production.overdue_jobs()
-
-# Jobs overdue
-
-# Show progress of jobs
-# st.subheader("Job Progress")
-# for i, row in jobs_df.iterrows():
-#     st.write(f"Job {row['Job ID']}: {row['Description']}")
-#     st.progress(row["Progress"])
