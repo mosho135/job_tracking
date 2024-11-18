@@ -5,3 +5,5 @@ streamlit_js_eval
 numpy
 streamlit_option_menu
 streamlit_extras
+gspread
+oauth2client
