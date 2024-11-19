@@ -14,8 +14,7 @@ from streamlit_option_menu import option_menu
 # TODO: Add another user that displays jobs that are ready to cut. (Figure out the auto refesh)
 # TODO: Add ability to change the material on approved artwork.
 # TODO: Cache the resources and data when so the app does not rerun each time
-
-# st.set_page_config(page_title="Job Tracking", page_icon="🌎", layout="wide")
+# TODO: Add in validation for the invoice number to check if it already exists. Add to the click.
 
 
 @st.cache_resource
@@ -66,6 +65,26 @@ class Production:
         from streamlit_extras.metric_cards import style_metric_cards
 
         self.format_data()
+
+        # TODO: Use the below functions to create the all button.
+        def av_options(df, options):
+            available_options = (
+                (df[options].sort_values(ascending=True)).unique().tolist()
+            )
+            available_options.insert(0, -1)
+
+            if "max_selections" not in st.session_state:
+                st.session_state["max_selections"] = len(available_options)
+
+            return available_options
+
+        def options_select(available_options, selected_options):
+            if selected_options in st.session_state:
+                if -1 in st.session_state[selected_options]:
+                    st.session_state[selected_options] = available_options[1:]
+                    st.session_state["max_selections"] = len(available_options)
+                else:
+                    st.session_state["max_selections"] = len(available_options)
 
         # Create filters for all jobs
         def filter_all_jobs(df):
@@ -516,7 +535,7 @@ class Production:
 
         # Ensure selected_rows is not empty
         if not selected_rows.empty:  # Check if there's at least one selected row
-            task_id = selected_rows["Inv No"].tolist()
+            task_id = selected_rows["id"].tolist()
 
             # Create a form to edit the status
             with st.form(key="edit_status_form"):
@@ -524,10 +543,21 @@ class Production:
                 machine_choice = ""
                 total_cost = 0
                 current_material = self.jobs_df.loc[
-                    self.jobs_df["Inv No"] == task_id[0], "Material"
+                    self.jobs_df["id"] == task_id[0], "Material"
                 ].sum()
                 material_change = ""
+                job_id = ""
+                new_inv = 0
                 if new_status == "Machining (Not Processed)":
+                    current_inv = self.jobs_df.loc[
+                        (self.jobs_df["Inv No"].notnull())
+                    ].copy()
+                    num_list = current_inv["Inv No"].unique().tolist()
+                    num_list.sort()
+                    new_inv = int(num_list[-1]) + 1
+                    job_id = st.text_input(
+                        "Inv No - Leave empty to auto increment number"
+                    )
                     total_cost = st.number_input("Job Cost")
                     material_change = st.text_input(
                         label="Material", value=current_material
@@ -542,104 +572,109 @@ class Production:
                 if submit_button:
                     for j_id in task_id:
                         current_status = self.jobs_df.loc[
-                            self.jobs_df["Inv No"] == j_id, "Status"
+                            self.jobs_df["id"] == j_id, "Status"
                         ].sum()
                         if new_status == "Waiting Approval":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "ProofApprovalTime"
+                                self.jobs_df["id"] == j_id, "ProofApprovalTime"
                             ] = {self.today}
                         elif new_status == "Machining (Not Processed)":
+                            self.jobs_df["Inv No"] = np.where(
+                                self.jobs_df["id"] == j_id,
+                                np.where(job_id == "", new_inv, job_id),
+                                self.jobs_df["Inv No"],
+                            )
                             self.jobs_df["TotalCost"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 total_cost,
                                 self.jobs_df["TotalCost"],
                             )
                             self.jobs_df["Material"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 material_change,
                                 self.jobs_df["Material"],
                             )
                             self.jobs_df["Proof"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 "Approved",
                                 self.jobs_df["Proof"],
                             )
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "ArtworkCompleteTime"
+                                self.jobs_df["id"] == j_id, "ArtworkCompleteTime"
                             ] = {self.today}
                         elif new_status == "Machining (In Process)":
                             self.jobs_df["MachineInUse"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 machine_choice,
                                 self.jobs_df["MachineInUse"],
                             )
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "CNCStartTime"
+                                self.jobs_df["id"] == j_id, "CNCStartTime"
                             ] = {self.today}
                         elif new_status == "At Finishing":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "CNCCompleteTime"
+                                self.jobs_df["id"] == j_id, "CNCCompleteTime"
                             ] = {self.today}
                         elif new_status == "Ready for Delivery":
                             cod_current_status = self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "CODStatus"
+                                self.jobs_df["id"] == j_id, "CODStatus"
                             ].sum()
                             if cod_current_status == "Not Paid":
                                 new_status = "Waiting payment (COD)"
 
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "FinishingCompleteTime"
+                                self.jobs_df["id"] == j_id, "FinishingCompleteTime"
                             ] = {self.today}
                         elif new_status == "Paid":
                             self.jobs_df["CODStatus"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["CODStatus"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "CODPaymentTime"
+                                self.jobs_df["id"] == j_id, "CODPaymentTime"
                             ] = {self.today}
                             if current_status == "Waiting payment (COD)":
                                 new_status = "Ready for Delivery"
                                 self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["Inv No"] == j_id,
+                                    self.jobs_df["id"] == j_id,
                                     new_status,
                                     self.jobs_df["Status"],
                                 )
 
                         elif new_status == "Delivered":
                             self.jobs_df["Status"] = np.where(
-                                self.jobs_df["Inv No"] == j_id,
+                                self.jobs_df["id"] == j_id,
                                 new_status,
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == j_id, "JobCompletedTime"
+                                self.jobs_df["id"] == j_id, "JobCompletedTime"
                             ] = {self.today}
                         self.jobs_df = self.jobs_df.astype(str)
                         sheet.update(
@@ -660,7 +695,7 @@ class Production:
                     if delete_button:
                         for i_id in task_id:
                             jobs_to_delete = self.jobs_df.loc[
-                                self.jobs_df["Inv No"] == i_id
+                                self.jobs_df["id"] == i_id
                             ].index
 
                             # Adjust index for Google Sheets (1-based indexing)
@@ -682,8 +717,6 @@ class Production:
         st.subheader("Add New Job")
         fr_col1, fr_col2 = st.columns(2)
         with fr_col1:
-            job_id = st.text_input("Inv No - Leave empty to auto increment number")
-        with fr_col2:
             client = st.text_input("Client")
 
         sr_col1, sr_col2 = st.columns(2)
@@ -735,13 +768,12 @@ class Production:
 
         if st.button("Add Job"):
             self.format_data()
-            if not job_id:
-                j_list = self.jobs_df["Inv No"].unique().tolist()
-                j_list.sort()
-                job_id = j_list[-1] + 1
+            j_list = self.jobs_df["id"].unique().tolist()
+            j_list.sort()
+            wid = j_list[-1] + 1
 
             new_job = {
-                "Inv No": [job_id],
+                "id": [wid],
                 "Client": [client],
                 "ClientType": [client_type],
                 "JobName": [jobname],
@@ -763,7 +795,7 @@ class Production:
                 [self.jobs_df.columns.values.tolist()] + self.jobs_df.values.tolist()
             )
             # self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
-            st.success(f"Invoice {job_id} added!")
+            st.success(f"Job {wid} added!")
             st.cache_data.clear()
             time.sleep(1)
             st.rerun()
