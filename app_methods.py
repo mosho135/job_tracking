@@ -546,7 +546,7 @@ class Production:
                     self.jobs_df["id"] == task_id[0], "Material"
                 ].sum()
                 material_change = ""
-                job_id = ""
+                job_id = 0
                 new_inv = 0
                 if new_status == "Machining (Not Processed)":
                     current_inv = self.jobs_df.loc[
@@ -555,7 +555,7 @@ class Production:
                     num_list = current_inv["Inv No"].unique().tolist()
                     num_list.sort()
                     new_inv = int(num_list[-1]) + 1
-                    job_id = st.text_input(
+                    job_id = st.number_input(
                         "Inv No - Leave empty to auto increment number"
                     )
                     total_cost = st.number_input("Job Cost")
@@ -586,7 +586,7 @@ class Production:
                         elif new_status == "Machining (Not Processed)":
                             self.jobs_df["Inv No"] = np.where(
                                 self.jobs_df["id"] == j_id,
-                                np.where(job_id == "", new_inv, job_id),
+                                np.where(job_id == 0, new_inv, job_id),
                                 self.jobs_df["Inv No"],
                             )
                             self.jobs_df["TotalCost"] = np.where(
