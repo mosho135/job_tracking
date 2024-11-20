@@ -15,6 +15,7 @@ from streamlit_option_menu import option_menu
 # TODO: Add ability to change the material on approved artwork.
 # TODO: Cache the resources and data when so the app does not rerun each time
 # TODO: Add in validation for the invoice number to check if it already exists. Add to the click.
+# TODO: Add in some cleaning for the number fields to show 0 and convert back to int.
 
 
 @st.cache_resource
@@ -38,6 +39,7 @@ def fetch_sheet_data(_sheet):
 
 
 client = get_gspread_client()
+# TODO: Change the sheet source when going live
 sheet = client.open("Foilworx_jobs").sheet1
 
 
@@ -555,19 +557,32 @@ class Production:
                     num_list = current_inv["Inv No"].unique().tolist()
                     num_list.sort()
                     new_inv = int(num_list[-1]) + 1
-                    job_id = st.number_input(
-                        "Inv No - Leave empty to auto increment number"
-                    )
-                    total_cost = st.number_input("Job Cost")
-                    material_change = st.text_input(
-                        label="Material", value=current_material
-                    )
+                    inv_no = self.jobs_df.loc[
+                        self.jobs_df["id"] == task_id[0], "Inv No"
+                    ].sum()
+
+                    # All Changes into one row
+                    cu_col1, cu_col2, cu_col3 = st.columns(3)
+                    with cu_col1:
+                        job_id = st.number_input(
+                            "Inv No - Leave empty to auto increment number",
+                            value=inv_no,
+                        )
+                    with cu_col2:
+                        total_cost = st.number_input("Job Cost")
+                    with cu_col3:
+                        material_change = st.text_input(
+                            label="Material", value=current_material
+                        )
 
                 if new_status == "Machining (In Process)":
                     machine_choice = st.selectbox(
                         "Choose Machine", ["Red", "Blue", "Yellow", "Purple"]
                     )
-                submit_button = st.form_submit_button(label="Update Status")
+
+                btn_col1, btn_col2 = st.columns([0.5, 3])
+                with btn_col1:
+                    submit_button = st.form_submit_button(label="Update Status")
 
                 if submit_button:
                     for j_id in task_id:
@@ -691,7 +706,8 @@ class Production:
                     "Waiting Approval",
                     "Machining (Not Processed)",
                 ):
-                    delete_button = st.form_submit_button(label="Delete Job")
+                    with btn_col2:
+                        delete_button = st.form_submit_button(label="Delete Job")
                     if delete_button:
                         for i_id in task_id:
                             jobs_to_delete = self.jobs_df.loc[
