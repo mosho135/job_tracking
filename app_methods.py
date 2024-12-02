@@ -9,13 +9,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 from st_aggrid import AgGrid, GridOptionsBuilder
 from streamlit_option_menu import option_menu
 
-# TODO: Add a delete job button.
 # TODO: Add in a download button for the data.
-# TODO: Add another user that displays jobs that are ready to cut. (Figure out the auto refesh)
-# TODO: Add ability to change the material on approved artwork.
-# TODO: Cache the resources and data when so the app does not rerun each time
-# TODO: Add in validation for the invoice number to check if it already exists. Add to the click.
 # TODO: Add in some cleaning for the number fields to show 0 and convert back to int.
+# TODO: Make the all jobs section editable and able to save. And Create a delete button.
+# TODO: Add size in the update section.
 
 
 @st.cache_resource
@@ -40,7 +37,7 @@ def fetch_sheet_data(_sheet):
 
 client = get_gspread_client()
 # TODO: Change the sheet source when going live
-sheet = client.open("Foilworx_jobs").sheet1
+sheet = client.open("Foilworx_test").sheet1
 
 
 class Production:
@@ -458,6 +455,21 @@ class Production:
                 st.subheader("All Jobs")
                 job_selection = filter_all_jobs(self.jobs_df)
                 AgGrid(job_selection, height=1000, key="all_jobs_grid")
+
+                # Download button
+                @st.cache_data
+                def convert_to_csv(df):
+                    return df.to_csv(index=False).encode("utf-8")
+
+                csv = convert_to_csv(job_selection)
+
+                download1 = st.download_button(
+                    label="Download Table",
+                    data=csv,
+                    file_name=f"foilworx-download-{self.today}.csv",
+                    mime="text/csv",
+                )
+
         elif displaytype == 3:
             # Display for the machine ready jobs
             el_col1, el_col2, el_col3 = st.columns(3)
@@ -550,6 +562,7 @@ class Production:
                 material_change = ""
                 job_id = 0
                 new_inv = 0
+                size_change = ""
                 if new_status == "Machining (Not Processed)":
                     current_inv = self.jobs_df.loc[
                         (self.jobs_df["Inv No"].notnull())
@@ -560,12 +573,15 @@ class Production:
                     inv_no = self.jobs_df.loc[
                         self.jobs_df["id"] == task_id[0], "Inv No"
                     ].sum()
+                    current_size = self.jobs_df.loc[
+                        self.jobs_df["id"] == task_id[0], "Size"
+                    ].sum()
 
                     # All Changes into one row
-                    cu_col1, cu_col2, cu_col3 = st.columns(3)
+                    cu_col1, cu_col2, cu_col3, cu_col4 = st.columns(4)
                     with cu_col1:
                         job_id = st.number_input(
-                            "Inv No - Leave empty to auto increment number",
+                            "Inv No",
                             value=inv_no,
                         )
                     with cu_col2:
@@ -574,6 +590,8 @@ class Production:
                         material_change = st.text_input(
                             label="Material", value=current_material
                         )
+                    with cu_col4:
+                        size_change = st.text_input(label="Size", value=current_size)
 
                 if new_status == "Machining (In Process)":
                     machine_choice = st.selectbox(
@@ -613,6 +631,11 @@ class Production:
                                 self.jobs_df["id"] == j_id,
                                 material_change,
                                 self.jobs_df["Material"],
+                            )
+                            self.jobs_df["Size"] = np.where(
+                                self.jobs_df["id"] == j_id,
+                                size_change,
+                                self.jobs_df["Size"],
                             )
                             self.jobs_df["Proof"] = np.where(
                                 self.jobs_df["id"] == j_id,
