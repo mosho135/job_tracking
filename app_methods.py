@@ -6,13 +6,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from oauth2client.service_account import ServiceAccountCredentials
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from streamlit_option_menu import option_menu
 
-# TODO: Add in a download button for the data.
-# TODO: Add in some cleaning for the number fields to show 0 and convert back to int.
 # TODO: Make the all jobs section editable and able to save. And Create a delete button.
-# TODO: Add size in the update section.
 
 
 @st.cache_resource
@@ -457,7 +454,18 @@ class Production:
             elif selected == "All Jobs":
                 st.subheader("All Jobs")
                 job_selection = filter_all_jobs(self.jobs_df)
-                AgGrid(job_selection, height=1000, key="all_jobs_grid")
+                gb = GridOptionsBuilder.from_dataframe(job_selection)
+                gb.configure_selection("multiple", use_checkbox=True)
+                gb.configure_default_column(editable=True)
+                gridOptions = gb.build()
+
+                all_grid_response = AgGrid(
+                    job_selection,
+                    gridOptions=gridOptions,
+                    height=1000,
+                    update_mode=GridUpdateMode.MODEL_CHANGED,
+                    key="all_jobs_grid",
+                )
 
                 # Download button
                 @st.cache_data
@@ -466,12 +474,68 @@ class Production:
 
                 csv = convert_to_csv(job_selection)
 
-                download1 = st.download_button(
-                    label="Download Table",
-                    data=csv,
-                    file_name=f"foilworx-download-{self.today}.csv",
-                    mime="text/csv",
-                )
+                aj_col1, aj_col2, aj_col3 = st.columns([0.5, 1.5, 1.5])
+
+                with aj_col1:
+                    download1 = st.download_button(
+                        label="Download",
+                        data=csv,
+                        file_name=f"foilworx-download-{self.today}.csv",
+                        mime="text/csv",
+                    )
+                with aj_col2:
+                    save_button = st.button("Save Updates")
+
+                if save_button:
+                    ag_data = pd.DataFrame(all_grid_response["data"])
+
+                    common_columns = self.jobs_df.columns.intersection(ag_data.columns)
+
+                    for _, row in ag_data.iterrows():
+                        mask = self.jobs_df["id"] == row["id"]
+
+                        if mask.any():
+                            for column in common_columns:
+                                self.jobs_df.loc[mask, column] = row[column]
+
+                    self.jobs_df = self.jobs_df.astype(str)
+                    sheet.update(
+                        [self.jobs_df.columns.values.tolist()]
+                        + self.jobs_df.values.tolist()
+                    )
+                    st.success("Updated")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+
+                # Create the deleting job section for all jobs
+                select_rows = pd.DataFrame(all_grid_response.get("selected_rows", []))
+
+                if not select_rows.empty:
+                    selected_id = select_rows["id"].tolist()
+
+                    with aj_col3:
+                        delete_button = st.button("Delete Job")
+
+                    if delete_button:
+                        for i_id in selected_id:
+                            jobs_to_delete = self.jobs_df.loc[
+                                self.jobs_df["id"] == i_id
+                            ].index
+
+                            # Adjust index for Google Sheets (1-based indexing)
+                            rows_to_delete = [
+                                index + 2 for index in jobs_to_delete
+                            ]  # +2 to skip the header row
+
+                            # Delete rows in reverse order to avoid shifting issues
+                            for row in sorted(rows_to_delete, reverse=True):
+                                sheet.delete_rows(row)
+
+                        st.success("Job has been deleted")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
 
         elif displaytype == 3:
             # Display for the machine ready jobs
