@@ -226,24 +226,24 @@ class Production:
 
         def machine_metrics():
             st.sidebar.metric(
-                label="Machine - Red",
-                value=machineinuse(self.jobs_df, "Red", "count"),
-                delta=machineinuse(self.jobs_df, "Red", "invoice"),
+                label="Machine - Mufasa",
+                value=machineinuse(self.jobs_df, "Mufasa", "count"),
+                delta=machineinuse(self.jobs_df, "Mufasa", "invoice"),
             )
             st.sidebar.metric(
-                label="Machine - Blue",
-                value=machineinuse(self.jobs_df, "Blue", "count"),
-                delta=machineinuse(self.jobs_df, "Blue", "invoice"),
+                label="Machine - Logo",
+                value=machineinuse(self.jobs_df, "Logo", "count"),
+                delta=machineinuse(self.jobs_df, "Logo", "invoice"),
             )
             st.sidebar.metric(
-                label="Machine - Yellow",
-                value=machineinuse(self.jobs_df, "Yellow", "count"),
-                delta=machineinuse(self.jobs_df, "Yellow", "invoice"),
+                label="Machine - Fresenius",
+                value=machineinuse(self.jobs_df, "Fresenius", "count"),
+                delta=machineinuse(self.jobs_df, "Fresenius", "invoice"),
             )
             st.sidebar.metric(
-                label="Machine - Purple",
-                value=machineinuse(self.jobs_df, "Purple", "count"),
-                delta=machineinuse(self.jobs_df, "Purple", "invoice"),
+                label="Machine - Simba",
+                value=machineinuse(self.jobs_df, "Simba", "count"),
+                delta=machineinuse(self.jobs_df, "Simba", "invoice"),
             )
 
             style_metric_cards(
@@ -662,7 +662,7 @@ class Production:
 
                 if new_status == "Machining (In Process)":
                     machine_choice = st.selectbox(
-                        "Choose Machine", ["Red", "Blue", "Yellow", "Purple"]
+                        "Choose Machine", ["Mufasa", "Logo", "Fresenius", "Simba"]
                     )
 
                 btn_col1, btn_col2 = st.columns([0.5, 3])
