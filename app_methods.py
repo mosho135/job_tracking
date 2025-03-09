@@ -1,16 +1,17 @@
 import datetime as dt
 import time
+import pytz
 
 import gspread
 import numpy as np
 import pandas as pd
 import streamlit as st
 from oauth2client.service_account import ServiceAccountCredentials
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 from streamlit_option_menu import option_menu
 
-# TODO: Make the all jobs section editable and able to save. And Create a delete button.
 
+south_africa_tz = pytz.timezone('Africa/Johannesburg')
 
 @st.cache_resource
 def get_gspread_client():
@@ -43,7 +44,7 @@ sheet = client.open("Foilworx_jobs").sheet1
 class Production:
     def __init__(self):
         self.jobs_df = pd.DataFrame()
-        self.today = pd.to_datetime(dt.datetime.today().strftime("%Y/%m/%d %H:%M"))
+        self.today = pd.to_datetime(dt.datetime.now(south_africa_tz).strftime("%Y/%m/%d %H:%M"))
         self.new_status = ""
 
     def format_data(self):
@@ -156,7 +157,9 @@ class Production:
                 )
 
         # Refresh button for all users
+        # TODO: show the button to all but the dashboard view
         if st.button("Refresh Table"):
+            st.cache_data.clear()
             st.rerun()
 
         all_artwork_jobs = self.jobs_df.loc[
@@ -165,7 +168,7 @@ class Production:
 
         # Added jobs from Artwork
         pending_jobs = self.jobs_df.loc[
-            (self.jobs_df["Status"] == "Artwork")
+            (self.jobs_df["Status"].isin(['Artwork', "Artwork Only"]))
             & (self.jobs_df["DTPOperator"] == fullname)
         ].copy()
 
@@ -195,6 +198,11 @@ class Production:
             self.jobs_df["Status"] == "At Finishing"
         ].copy()
 
+        # Display for QC
+        qc_jobs = self.jobs_df.loc[
+            self.jobs_df["Status"] == "Ready For QC"
+        ].copy()
+
         # Delivery Jobs
         delivery_jobs = self.jobs_df.loc[
             self.jobs_df["Status"] == "Ready for Delivery"
@@ -202,6 +210,9 @@ class Production:
 
         # Delivery Jobs
         delivered_jobs = self.jobs_df.loc[self.jobs_df["Status"] == "Delivered"].copy()
+
+        # Delivered Today
+        delivered_today = delivered_jobs.loc[delivered_jobs['JobCompletedTime'] >= self.today.strftime("%Y-%m-%d")].copy()
 
         # Get the current machine in use
         def machineinuse(df, mac_color, output_need):
@@ -245,6 +256,11 @@ class Production:
                 value=machineinuse(self.jobs_df, "Simba", "count"),
                 delta=machineinuse(self.jobs_df, "Simba", "invoice"),
             )
+            st.sidebar.metric(
+                label="Machine - Missy",
+                value=machineinuse(self.jobs_df, "Missy", "count"),
+                delta=machineinuse(self.jobs_df, "Missy", "invoice"),
+            )
 
             style_metric_cards(
                 background_color="#ffffff",
@@ -268,8 +284,78 @@ class Production:
                 )
             return selected
 
+        def dashboard_metrics():
+            st.subheader("DASHBOARD")
+            da_col1, da_col2, da_col3 = st.columns(3)
+            da_col1.metric(
+                label="Jobs At Artwork",
+                value=all_artwork_jobs["Status"].count(),
+                delta="",
+            )
+            da_col2.metric(
+                label="Waiting Artwork Approval",
+                value=proof_approval["Status"].count(),
+                delta="",
+            )
+            da_col3.metric(
+                label="Waiting C.O.D Payment",
+                value=waiting_cod_payment["Status"].count(),
+                delta="",
+            )
+
+            ds_col1, ds_col2, ds_col3 = st.columns(3)
+            ds_col1.metric(
+                label="Jobs Ready to Cut",
+                value=ready_for_machine["Status"].count(),
+                delta="",
+            )
+            ds_col2.metric(
+                label="Jobs Currently Cutting",
+                value=cutting_in_progress["Status"].count(),
+                delta="",
+            )
+            ds_col3.metric(
+                label="Jobs At Finishing",
+                value=finishing_jobs["Status"].count(),
+                delta="",
+            )
+            df_col1, df_col2, df_col3 = st.columns(3)
+            df_col1.metric(
+                label="Ready For QC",
+                value=qc_jobs["Status"].count(),
+                delta="",
+            )
+            df_col2.metric(
+                label="Ready for Delivery",
+                value=delivery_jobs["Status"].count(),
+                delta="",
+            )
+            df_col3.metric(
+                label="Delivered",
+                value=delivered_today["Status"].count(),
+                delta="",
+            )
+
+
+            style_metric_cards(
+                background_color="#ffffff",
+                border_left_color="#18334C",
+                box_shadow=True,
+            )
+
         # Check the display types and display to the user
-        if displaytype == 1:
+        # Admin User Dashboard
+        if displaytype == 6:
+            st.sidebar.markdown("<h4>Machines Currently In Use</h4>", unsafe_allow_html=True)
+            machine_metrics()
+            # Auto refresh the data
+            while True:
+                dashboard_metrics()
+
+                time.sleep(2)
+                st.rerun()
+
+        elif displaytype == 1:
             menu_items = ["Production Dashboard", "My Jobs"]
             selected = sidebar_option_menu(menu_items, len(menu_items))
 
@@ -277,110 +363,113 @@ class Production:
             invoice_display()
 
             if selected == "Production Dashboard":
-                st.subheader("DASHBOARD")
-                ad_col1, ad_col2, ad_col3 = st.columns(3)
-                ad_col1.metric(
-                    label="Jobs At Artwork",
-                    value=all_artwork_jobs["Status"].count(),
-                    delta="",
-                )
-                ad_col2.metric(
-                    label="Jobs Ready to Cut",
-                    value=ready_for_machine["Status"].count(),
-                    delta="",
-                )
-                ad_col3.metric(
-                    label="Jobs Currently Cutting",
-                    value=cutting_in_progress["Status"].count(),
-                    delta="",
-                )
-
-                as_col1, as_col2, as_col3 = st.columns(3)
-                as_col1.metric(
-                    label="Jobs At Finishing",
-                    value=finishing_jobs["Status"].count(),
-                    delta="",
-                )
-                as_col2.metric(
-                    label="Ready for Delivery",
-                    value=delivery_jobs["Status"].count(),
-                    delta="",
-                )
-                as_col3.metric(
-                    label="Delivered",
-                    value=delivered_jobs["Status"].count(),
-                    delta="",
-                )
-
-                style_metric_cards(
-                    background_color="#ffffff",
-                    border_left_color="#18334C",
-                    box_shadow=True,
-                )
+                dashboard_metrics()
 
                 db_radio = st.radio(
                     label="Jobs Navigation",
                     options=[
-                        "Artwork Jobs",
-                        "Ready for Machine",
+                        "Jobs At Artwork",
+                        "Waiting Artwork Approval",
+                        "Waiting C.O.D Payment",
+                        "Ready to Cut",
                         "Currently Cutting",
                         "At Finishing",
+                        "Ready For QC",
                         "Ready For Delivery",
                         "Delivered",
                     ],
                     horizontal=True,
                 )
 
-                if db_radio == "Artwork Jobs":
+                if db_radio == "Jobs At Artwork":
                     AgGrid(all_artwork_jobs, height=400, key="all_artwork_grid")
-                elif db_radio == "Ready for Machine":
+                elif db_radio == "Waiting Artwork Approval":
+                    AgGrid(proof_approval, height=400, key="all_artwork_grid")
+                elif db_radio == "Waiting C.O.D Payment":
+                    AgGrid(waiting_cod_payment, height=400, key="all_artwork_grid")
+                elif db_radio == "Ready to Cut":
                     AgGrid(ready_for_machine, height=400, key="all_artwork_grid")
                 elif db_radio == "Currently Cutting":
                     AgGrid(cutting_in_progress, height=400, key="all_artwork_grid")
                 elif db_radio == "At Finishing":
                     AgGrid(finishing_jobs, height=400, key="all_artwork_grid")
+                elif db_radio == "Ready For QC":
+                    AgGrid(qc_jobs, height=400, key="all_artwork_grid")
                 elif db_radio == "Ready For Delivery":
                     AgGrid(delivery_jobs, height=400, key="all_artwork_grid")
                 elif db_radio == "Delivered":
-                    AgGrid(delivered_jobs, height=400, key="all_artwork_grid")
+                    AgGrid(delivered_today, height=400, key="all_artwork_grid")
 
             elif selected == "My Jobs":
                 navigation = st.radio(
                     "Job Navigation", ["All Jobs", "Add Job"], horizontal=True
                 )
                 if navigation == "All Jobs":
-                    at_col1, at_col2 = st.columns(2)
+                    at_col1, at_col2, at_col3, at_col4, at_col5 = st.columns(5)
                     at_col1.metric(
-                        label="All Current Artwork Jobs",
+                        label="Pending",
                         value=pending_jobs["Status"].count(),
                         delta="",
                     )
                     at_col2.metric(
-                        label="Jobs Waiting COD Payement",
+                        label="Ready to cut",
+                        value=proof_approval["Status"].count(),
+                        delta="",
+                    )
+                    at_col3.metric(
+                        label="Awaiting C.O.D Payment",
                         value=waiting_cod_payment["Status"].count(),
                         delta="",
                     )
+                    at_col4.metric(
+                        label="Currently Cutting",
+                        value=cutting_in_progress["Status"].count(),
+                        delta="",
+                    )
+                    at_col5.metric(
+                        label="Ready For QC",
+                        value=qc_jobs["Status"].count(),
+                        delta="",
+                    )
+
                     style_metric_cards(
                         background_color="#ffffff",
                         border_left_color="#18334C",
                         box_shadow=True,
                     )
 
-                    at_radio = st.radio(
+                    atl_radio = st.radio(
                         label="Current Job Navigation",
-                        options=["Artwork Jobs", "Waiting COD Payment"],
+                        options=[
+                            "Pending",
+                            "Ready to cut",
+                            "Awaiting C.O.D Payment",
+                            "Currently Cutting",
+                            "Ready for QC",
+                        ],
                         horizontal=True,
                     )
 
-                    if at_radio == "Artwork Jobs":
+                    if atl_radio == "Pending":
                         # Display Current Artwork Jobs
-                        st.subheader("All Current Jobs")
+                        st.subheader("Pending Jobs")
                         self.update_job(
-                            pending_jobs, "Machining (Not Processed)", "artwork_grid"
+                            pending_jobs, "Waiting Approval", "artwork_grid"
                         )
-                    elif at_radio == "Waiting COD Payment":
-                        st.subheader("Waiting COD Payment")
+                    elif atl_radio == "Ready to cut":
+                        st.subheader("Ready to cut")
+                        self.update_job(
+                            proof_approval, "Machining (Not Processed)", "proof_grid"
+                        )
+                    elif atl_radio == "Awaiting C.O.D Payment":
+                        st.subheader("Awaiting C.O.D Payment")
                         self.update_job(waiting_cod_payment, "Paid", "cod_grid")
+                    elif atl_radio == "Currently Cutting":
+                        st.subheader("Currently Cutting")
+                        AgGrid(cutting_in_progress, height=400, key="cur_cutting_grid")
+                    elif atl_radio == "Ready for QC":
+                        st.subheader("Ready For QC")
+                        AgGrid(qc_jobs, height=400, key="qc_cur_grid")
 
                 elif navigation == "Add Job":
                     self.add_job(fullname=fullname)
@@ -402,7 +491,7 @@ class Production:
                 )
                 if at_radio == "All Jobs":
                     # Display Jobs per DTP Operator
-                    at_col1, at_col2, at_col3 = st.columns(3)
+                    at_col1, at_col2, at_col3, at_col4, at_col5 = st.columns(5)
                     at_col1.metric(
                         label="Pending",
                         value=pending_jobs["Status"].count(),
@@ -418,6 +507,16 @@ class Production:
                         value=waiting_cod_payment["Status"].count(),
                         delta="",
                     )
+                    at_col4.metric(
+                        label="Currently Cutting",
+                        value=cutting_in_progress["Status"].count(),
+                        delta="",
+                    )
+                    at_col5.metric(
+                        label="Ready For QC",
+                        value=qc_jobs["Status"].count(),
+                        delta="",
+                    )
 
                     style_metric_cards(
                         background_color="#ffffff",
@@ -425,30 +524,40 @@ class Production:
                         box_shadow=True,
                     )
 
-                    at_radio = st.radio(
+                    atl_radio = st.radio(
                         label="Current Job Navigation",
                         options=[
                             "Pending",
                             "Ready to cut",
                             "Awaiting C.O.D Payment",
+                            "Currently Cutting",
+                            "Ready for QC",
                         ],
                         horizontal=True,
                     )
 
-                    if at_radio == "Pending":
+                    if atl_radio == "Pending":
                         # Display Current Artwork Jobs
                         st.subheader("Pending Jobs")
                         self.update_job(
                             pending_jobs, "Waiting Approval", "artwork_grid"
                         )
-                    elif at_radio == "Ready to cut":
+                    elif atl_radio == "Ready to cut":
                         st.subheader("Ready to cut")
                         self.update_job(
                             proof_approval, "Machining (Not Processed)", "proof_grid"
                         )
-                    elif at_radio == "Awaiting C.O.D Payment":
+                    elif atl_radio == "Awaiting C.O.D Payment":
                         st.subheader("Awaiting C.O.D Payment")
                         self.update_job(waiting_cod_payment, "Paid", "cod_grid")
+                    elif atl_radio == "Currently Cutting":
+                        st.subheader("Currently Cutting")
+                        AgGrid(cutting_in_progress, height=400, key="cur_cutting_grid")
+                    elif atl_radio == "Ready for QC":
+                        st.subheader("Ready For QC")
+                        AgGrid(qc_jobs, height=400, key="qc_cur_grid")
+
+
                 elif at_radio == "Add Job":
                     self.add_job(fullname)
             elif selected == "All Jobs":
@@ -539,7 +648,7 @@ class Production:
 
         elif displaytype == 3:
             # Display for the machine ready jobs
-            el_col1, el_col2, el_col3 = st.columns(3)
+            el_col1, el_col2, el_col3, el_col4, el_col5 = st.columns(5)
             el_col1.metric(
                 label="Jobs To Cut", value=ready_for_machine["Status"].count(), delta=""
             )
@@ -553,6 +662,16 @@ class Production:
                 value=finishing_jobs["Status"].count(),
                 delta="",
             )
+            el_col4.metric(
+                label="Jobs Ready for QC",
+                value=qc_jobs["Status"].count(),
+                delta="",
+            )
+            el_col5.metric(
+                label="Jobs Ready for Delivery",
+                value=delivery_jobs["Status"].count(),
+                delta="",
+            )
             style_metric_cards(
                 background_color="#ffffff",
                 border_left_color="#18334C",
@@ -561,7 +680,7 @@ class Production:
 
             el_radio = st.radio(
                 label="Screen Navigation",
-                options=["Ready For Machine", "Currently Cutting", "Finishing"],
+                options=["Ready For Machine", "Currently Cutting", "Finishing", "Ready For QC", "Ready For Delivery"],
                 horizontal=True,
             )
 
@@ -578,7 +697,38 @@ class Production:
             elif el_radio == "Finishing":
                 # Display Finishing
                 st.subheader("Finishing")
-                self.update_job(finishing_jobs, "Ready for Delivery", "finishing_grid")
+                self.update_job(finishing_jobs, "Ready For QC", "finishing_grid")
+            elif el_radio == "Ready For QC":
+                st.subheader("Quality Checks")
+                self.update_job(qc_jobs, "Ready for Delivery", "qc_grid")
+            elif el_radio == "Ready For Delivery":
+                st.subheader("Ready For Delivery")
+                delivery_jobs['OverdueCheck'] = np.where(delivery_jobs['EstimatedDeliveryDate'] < self.today.strftime("%Y-%m-%d"), "Overdue", "NotDue")
+                gb = GridOptionsBuilder.from_dataframe(delivery_jobs)
+
+                jscode = JsCode("""
+                function(params) {
+                    if (params.data.JobPriority === 'Urgent'){
+                        return {backgroundColor: '#FEB973'};    
+                    } else if (params.data.OverdueCheck === 'Overdue'){
+                        return {backgroundColor: '#FF6F6F'}
+                    }
+                    return {};
+                }
+                """)
+                grid_options = gb.build()
+                grid_options['getRowStyle'] = jscode
+
+                # Display the grid
+                grid_response = AgGrid(
+                    delivery_jobs,
+                    gridOptions=grid_options,
+                    allow_unsafe_jscode=True,
+                    enable_enterprise=False,
+                    height=400,
+                    key="delivery_jobs_grid",
+                )
+
         elif displaytype == 5:
             # Display jobs for delivery
             dl_col1, dl_col2 = st.columns(2)
@@ -594,17 +744,32 @@ class Production:
             self.update_job(delivery_jobs, "Delivered", "delivery_grid")
 
     def update_job(self, display_df, status_update, aggrid_key):
+
         # Create grid options
+        display_df['OverdueCheck'] = np.where(display_df['EstimatedDeliveryDate'] < self.today.strftime("%Y-%m-%d"), "Overdue", "NotDue")
         gb = GridOptionsBuilder.from_dataframe(display_df)
         gb.configure_selection(
             "multiple", use_checkbox=True
         )  # Enable single row selection
+
+        jscode = JsCode("""
+        function(params) {
+            if (params.data.JobPriority === 'Urgent'){
+                return {backgroundColor: '#FEB973'};    
+            } else if (params.data.OverdueCheck === 'Overdue'){
+                return {backgroundColor: '#FF6F6F'}
+            }
+            return {};
+        }
+        """)
         grid_options = gb.build()
+        grid_options['getRowStyle'] = jscode
 
         # Display the grid
         grid_response = AgGrid(
             display_df,
             gridOptions=grid_options,
+            allow_unsafe_jscode=True,
             enable_enterprise=False,
             height=400,
             key=aggrid_key,
@@ -662,7 +827,7 @@ class Production:
 
                 if new_status == "Machining (In Process)":
                     machine_choice = st.selectbox(
-                        "Choose Machine", ["Mufasa", "Logo", "Fresenius", "Simba"]
+                        "Choose Machine", ["Mufasa", "Logo", "Fresenius", "Simba", "Missy"]
                     )
 
                 btn_col1, btn_col2 = st.columns([0.5, 3])
@@ -673,6 +838,9 @@ class Production:
                     for j_id in task_id:
                         current_status = self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "Status"
+                        ].sum()
+                        current_jobtype = self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "JobType"
                         ].sum()
                         if new_status == "Waiting Approval":
                             self.jobs_df["Status"] = np.where(
@@ -709,11 +877,21 @@ class Production:
                                 "Approved",
                                 self.jobs_df["Proof"],
                             )
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
+                            if current_jobtype == "Artwork Only":
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == j_id,
+                                    "Delivered",
+                                    self.jobs_df["Status"],
+                                )
+                                self.jobs_df.loc[
+                                    self.jobs_df["id"] == j_id, "JobCompletedTime"
+                                ] = {self.today}
+                            else:
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == j_id,
+                                    new_status,
+                                    self.jobs_df["Status"],
+                                )
                             self.jobs_df.loc[
                                 self.jobs_df["id"] == j_id, "ArtworkCompleteTime"
                             ] = {self.today}
@@ -740,6 +918,15 @@ class Production:
                             self.jobs_df.loc[
                                 self.jobs_df["id"] == j_id, "CNCCompleteTime"
                             ] = {self.today}
+                        elif new_status == "Ready For QC":
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == j_id,
+                                new_status,
+                                self.jobs_df["Status"],
+                            )
+                            self.jobs_df.loc[
+                                self.jobs_df["id"] == j_id, "FinishingCompleteTime"
+                            ] = {self.today}
                         elif new_status == "Ready for Delivery":
                             cod_current_status = self.jobs_df.loc[
                                 self.jobs_df["id"] == j_id, "CODStatus"
@@ -753,8 +940,9 @@ class Production:
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "FinishingCompleteTime"
+                                self.jobs_df["id"] == j_id, "QCCompleteTime"
                             ] = {self.today}
+
                         elif new_status == "Paid":
                             self.jobs_df["CODStatus"] = np.where(
                                 self.jobs_df["id"] == j_id,
@@ -818,6 +1006,47 @@ class Production:
                         time.sleep(1)
                         st.rerun()
 
+                if new_status in (
+                    "At Finishing",
+                    "Ready For QC",
+                    "Ready for Delivery",
+                    "Delivered",
+                ):
+                    with btn_col2:
+                        reverse_button = st.form_submit_button(label="Reverse Status")
+                    if reverse_button:
+                        for i_id in task_id:
+                            if new_status == 'At Finishing':
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == i_id, "Machining (Not Processed)",
+                                    self.jobs_df["Status"],
+                                )
+                            elif new_status == 'Ready For QC':
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == i_id, "Machining (In Process)",
+                                    self.jobs_df["Status"],
+                                )
+                            elif new_status == 'Ready for Delivery':
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == i_id, "At Finishing",
+                                    self.jobs_df["Status"],
+                                )
+                            elif new_status == 'Delivered':
+                                self.jobs_df["Status"] = np.where(
+                                    self.jobs_df["id"] == i_id, "Ready For QC",
+                                    self.jobs_df["Status"],
+                                )
+                            self.jobs_df = self.jobs_df.astype(str)
+                            sheet.update(
+                                [self.jobs_df.columns.values.tolist()]
+                                + self.jobs_df.values.tolist()
+                            )
+                        st.success("Job has been reversed")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                    
+
     def add_job(self, fullname):
         # Add a new job
         st.subheader("Add New Job")
@@ -845,16 +1074,11 @@ class Production:
         with hr_col2:
             machine_time = st.time_input("Machine Time")
         with hr_col3:
-            status = st.selectbox(
-                "Status",
+            jobtype = st.selectbox(
+                "Job Type",
                 [
-                    "Artwork",
-                    "Machining (Not Processed)",
-                    "Machining (In Process)",
-                    "At Finishing",
-                    "Waiting payment (COD)",
-                    "Ready for Delivery",
-                    "Delivered",
+                    "Normal",
+                    "Artwork Only",
                 ],
             )
         l_col1, l_col2 = st.columns(2)
@@ -887,7 +1111,8 @@ class Production:
                 "Material": [material],
                 "MachineTime": [machine_time],
                 "EstimatedDeliveryDate": [deadline],
-                "Status": [status],
+                "JobType": [jobtype],
+                "Status": ["Artwork"],
                 "CODStatus": [cod_status],
                 "DTPOperator": [fullname],
                 "JobAddedTime": [self.today],

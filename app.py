@@ -59,8 +59,9 @@ def check_password():
 
 # Check if the user is logged in
 if check_password():
+    st.image("Banner1.png", use_container_width=True)
     # Hide the login form and display the main application content
-    st.success(f"You are logged in! {st.session_state['logged_in_user']}")
+    # st.success(f"You are logged in! {st.session_state['logged_in_user']}")
     # Logout button to allow the user to log out
     if st.button("Logout"):
         st.session_state["logged_in"] = False
@@ -70,10 +71,6 @@ else:
     # Stop the execution if not logged in, preventing app content from being shown
     st.stop()
 
-
-# TODO: Create functions that hold which the users pages.
-# TODO: Create a function that holds the users accessibility.
-# TODO: Display each users page on login.
 
 job_production = Production()
 

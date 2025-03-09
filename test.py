@@ -1,68 +1,26 @@
-import gspread
-import pandas as pd
-import streamlit as st
-from oauth2client.service_account import ServiceAccountCredentials
-from st_aggrid import AgGrid
+# TODO: Changes for Foilworx Job Ticketing System
 
-# Set up Google Sheets API
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive",
-]
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["google"], scope
-)
-client = gspread.authorize(credentials)
+# Ellis
+# -	No left to right scroll - Getting a new PC
+# Done -	Could we reverse a job – go back in status - Add in a push back to previous status button.
+# Done -	A QC status to be added after finishing - Artwork needs to have a view of this as well.
+# Done -	Add a 5th Machine name – Missy – Sort for Miscellaneos - Only add the machine.
 
-# Open the Google Sheet by name or URL
-SHEET_NAME = "Foilworx_jobs"
-sheet = client.open(SHEET_NAME).sheet1
 
-data = pd.DataFrame(sheet.get_all_records())
+# April
+# Done -	CODs – AJ to see when clients paid - route to delivery
+# Does April need to see all thats ready for delivery or just the CODs?
 
-AgGrid(data)
-# # Function to load data from Google Sheet into a DataFrame
-# def load_data():
-#     data = sheet.get_all_records()
-#     return pd.DataFrame(data)
-#
-# # Function to add a new job
-# def add_job(job_name, status):
-#     sheet.append_row([job_name, status])
-#
-# # Function to update a job status
-# def update_job(row, status):
-#     sheet.update_cell(row, 2, status)  # Assuming column 2 is the 'status' column
-#
-# # Function to delete a job
-# def delete_job(row):
-#     sheet.delete_row(row)
-#
-# # Streamlit UI
-# st.title("Job Ticketing System with Google Sheets")
-#
-# # Display existing jobs
-# df = load_data()
-# st.write("### Existing Jobs", df)
-#
-# # Add a new job
-# new_job = st.text_input("Enter new job name")
-# if st.button("Add Job"):
-#     add_job(new_job, "Pending")
-#     st.success(f"Job '{new_job}' added!")
-#     st.experimental_rerun()
-#
-# # Update job status
-# job_to_update = st.number_input("Enter job row number to update", min_value=2, step=1)
-# new_status = st.selectbox("Select new status", ["Pending", "In Progress", "Completed"])
-# if st.button("Update Job"):
-#     update_job(job_to_update, new_status)
-#     st.success(f"Job row {job_to_update} updated to '{new_status}'!")
-#     st.experimental_rerun()
-#
-# # Delete a job
-# job_to_delete = st.number_input("Enter job row number to delete", min_value=2, step=1)
-# if st.button("Delete Job"):
-#     delete_job(job_to_delete)
-#     st.success(f"Job row {job_to_delete} deleted!")
-#     st.experimental_rerun()
+
+# Marlene
+# Need to get new Logo -	Foilworx Logo - Shivaan will send a banner.
+# Need to Check on Live -	Time on the app – Starting and ending - Time seems to be inaccurate. Check the datetime in python with google sheets
+# Done -	Need currently cutting and Ready for QC Tab for Artwork.
+# -	If changes are made to the columns to stay and not change when refreshing. - Shivaan will give the columns layout
+# Done -	Artwork Only - Create a status that will jump straight to completed. Does this still go to waiting for aproval?
+# Done -	Colours Red, orange, yellow – Urgent. Delivery date due
+# Done - Orange - Ready For delivery.
+# Done - Red - Urgent - On the due date (Look at some examples)
+# Done -	TV screen refresh - Needs a dashboard - Delivered to show daily deliveries
+# Done - Delivered - Make sure that this metric only shows for today
+
