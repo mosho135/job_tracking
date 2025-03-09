@@ -35,10 +35,10 @@ def fetch_sheet_data(_sheet):
 
 client = get_gspread_client()
 # TODO: Change the sheet source when going live
-sheet = client.open("Foilworx_jobs").sheet1
+# sheet = client.open("Foilworx_jobs").sheet1
 
 # Test sheet
-# sheet = client.open("Foilworx_test").sheet1
+sheet = client.open("Foilworx_test").sheet1
 
 
 class Production:
@@ -756,8 +756,10 @@ class Production:
         function(params) {
             if (params.data.JobPriority === 'Urgent'){
                 return {backgroundColor: '#FEB973'};    
-            } else if (params.data.OverdueCheck === 'Overdue'){
-                return {backgroundColor: '#FF6F6F'}
+            } else if (params.data.Status != 'Artwork' && params.data.Status != 'Artwork Only'){
+                if (params.data.OverdueCheck === 'Overdue'){
+                    return {backgroundColor: '#FF6F6F'}
+                }
             }
             return {};
         }
