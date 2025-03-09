@@ -1,5 +1,6 @@
 import datetime as dt
 import time
+from decouple import DEFAULT_ENCODING
 import pytz
 
 import gspread
@@ -844,6 +845,7 @@ class Production:
                         current_jobtype = self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "JobType"
                         ].sum()
+                        current_client_type = self.jobs_df.loc[self.jobs_df['id'] == j_id, "ClientType"].sum()
                         if new_status == "Waiting Approval":
                             self.jobs_df["Status"] = np.where(
                                 self.jobs_df["id"] == j_id,
@@ -1061,7 +1063,7 @@ class Production:
             client_type = st.selectbox("Client Type", ["Account", "COD"])
         with sr_col2:
             cod_status = st.selectbox(
-                "COD Status", ["Not Applicable", "Not Paid", "Paid"]
+                "COD Status", ["Not Applicable", "Not Paid", "Paid"] 
             )
 
         tr_col1, tr_col2 = st.columns(2)
@@ -1103,6 +1105,9 @@ class Production:
             j_list = self.jobs_df["id"].unique().tolist()
             j_list.sort()
             wid = j_list[-1] + 1
+
+            if client_type == "COD" and cod_status == "Not Applicable":
+                cod_status = "Not Paid"
 
             new_job = {
                 "id": [wid],
