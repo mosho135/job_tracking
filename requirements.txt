@@ -2,6 +2,7 @@ streamlit
 pandas
 streamlit-aggrid
 streamlit_js_eval
+streamlit_autorefresh
 numpy
 streamlit_option_menu
 streamlit_extras

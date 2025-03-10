@@ -1,6 +1,5 @@
 import datetime as dt
 import time
-from decouple import DEFAULT_ENCODING
 import pytz
 
 import gspread
@@ -10,6 +9,7 @@ import streamlit as st
 from oauth2client.service_account import ServiceAccountCredentials
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 from streamlit_option_menu import option_menu
+from streamlit_autorefresh import st_autorefresh
 
 
 south_africa_tz = pytz.timezone('Africa/Johannesburg')
@@ -347,14 +347,11 @@ class Production:
         # Check the display types and display to the user
         # Admin User Dashboard
         if displaytype == 6:
+            st_autorefresh(interval=2_000, key="auto_refresh")
             st.sidebar.markdown("<h4>Machines Currently In Use</h4>", unsafe_allow_html=True)
             machine_metrics()
             # Auto refresh the data
-            while True:
-                dashboard_metrics()
-
-                time.sleep(2)
-                st.rerun()
+            dashboard_metrics()
 
         elif displaytype == 1:
             menu_items = ["Production Dashboard", "My Jobs"]
