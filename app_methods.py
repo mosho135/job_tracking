@@ -347,7 +347,7 @@ class Production:
         # Check the display types and display to the user
         # Admin User Dashboard
         if displaytype == 6:
-            st_autorefresh(interval=2_000, key="auto_refresh")
+            st_autorefresh(interval=60_000, key="auto_refresh")
             st.sidebar.markdown("<h4>Machines Currently In Use</h4>", unsafe_allow_html=True)
             machine_metrics()
             # Auto refresh the data
