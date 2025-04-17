@@ -36,10 +36,10 @@ def fetch_sheet_data(_sheet):
 
 client = get_gspread_client()
 # TODO: Change the sheet source when going live
-# sheet = client.open("Foilworx_jobs").sheet1
+sheet = client.open("Foilworx_jobs").sheet1
 
 # Test sheet
-sheet = client.open("Foilworx_test").sheet1
+# sheet = client.open("Foilworx_test").sheet1
 
 
 class Production:
@@ -782,7 +782,6 @@ class Production:
         # Ensure selected_rows is not empty
         if not selected_rows.empty:  # Check if there's at least one selected row
             task_id = selected_rows["id"].tolist()
-            st.write(task_id)
 
             # Create a form to edit the status
             new_status = status_update
