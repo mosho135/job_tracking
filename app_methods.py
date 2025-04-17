@@ -782,6 +782,7 @@ class Production:
         # Ensure selected_rows is not empty
         if not selected_rows.empty:  # Check if there's at least one selected row
             task_id = selected_rows["id"].tolist()
+            st.write(task_id)
 
             # Create a form to edit the status
             new_status = status_update
