@@ -784,269 +784,268 @@ class Production:
             task_id = selected_rows["id"].tolist()
 
             # Create a form to edit the status
-            with st.form(key="edit_status_form"):
-                new_status = status_update
-                machine_choice = ""
-                total_cost = 0
-                current_material = self.jobs_df.loc[
-                    self.jobs_df["id"] == task_id[0], "Material"
+            new_status = status_update
+            machine_choice = ""
+            total_cost = 0
+            current_material = self.jobs_df.loc[
+                self.jobs_df["id"] == task_id[0], "Material"
+            ].sum()
+            material_change = ""
+            job_id = 0
+            new_inv = 0
+            size_change = ""
+            if new_status == "Machining (Not Processed)":
+                current_inv = self.jobs_df.loc[
+                    (self.jobs_df["Inv No"].notnull())
+                ].copy()
+                num_list = current_inv["Inv No"].unique().tolist()
+                num_list.sort()
+                new_inv = int(num_list[-1]) + 1
+                inv_no = self.jobs_df.loc[
+                    self.jobs_df["id"] == task_id[0], "Inv No"
                 ].sum()
-                material_change = ""
-                job_id = 0
-                new_inv = 0
-                size_change = ""
-                if new_status == "Machining (Not Processed)":
-                    current_inv = self.jobs_df.loc[
-                        (self.jobs_df["Inv No"].notnull())
-                    ].copy()
-                    num_list = current_inv["Inv No"].unique().tolist()
-                    num_list.sort()
-                    new_inv = int(num_list[-1]) + 1
-                    inv_no = self.jobs_df.loc[
-                        self.jobs_df["id"] == task_id[0], "Inv No"
-                    ].sum()
-                    current_size = self.jobs_df.loc[
-                        self.jobs_df["id"] == task_id[0], "Size"
-                    ].sum()
+                current_size = self.jobs_df.loc[
+                    self.jobs_df["id"] == task_id[0], "Size"
+                ].sum()
 
-                    # All Changes into one row
-                    cu_col1, cu_col2, cu_col3, cu_col4 = st.columns(4)
-                    with cu_col1:
-                        job_id = st.number_input(
-                            "Inv No",
-                            value=inv_no,
-                        )
-                    with cu_col2:
-                        total_cost = st.number_input("Job Cost")
-                    with cu_col3:
-                        material_change = st.text_input(
-                            label="Material", value=current_material
-                        )
-                    with cu_col4:
-                        size_change = st.text_input(label="Size", value=current_size)
-
-                if new_status == "Machining (In Process)":
-                    machine_choice = st.selectbox(
-                        "Choose Machine", ["Mufasa", "Logo", "Fresenius", "Simba", "Missy"]
+                # All Changes into one row
+                cu_col1, cu_col2, cu_col3, cu_col4 = st.columns(4)
+                with cu_col1:
+                    job_id = st.number_input(
+                        "Inv No",
+                        value=inv_no,
                     )
+                with cu_col2:
+                    total_cost = st.number_input("Job Cost")
+                with cu_col3:
+                    material_change = st.text_input(
+                        label="Material", value=current_material
+                    )
+                with cu_col4:
+                    size_change = st.text_input(label="Size", value=current_size)
 
-                btn_col1, btn_col2 = st.columns([0.5, 3])
-                with btn_col1:
-                    submit_button = st.form_submit_button(label="Update Status")
+            if new_status == "Machining (In Process)":
+                machine_choice = st.selectbox(
+                    "Choose Machine", ["Mufasa", "Logo", "Fresenius", "Simba", "Missy"]
+                )
 
-                if submit_button:
-                    for j_id in task_id:
-                        current_status = self.jobs_df.loc[
-                            self.jobs_df["id"] == j_id, "Status"
-                        ].sum()
-                        current_jobtype = self.jobs_df.loc[
-                            self.jobs_df["id"] == j_id, "JobType"
-                        ].sum()
-                        current_client_type = self.jobs_df.loc[self.jobs_df['id'] == j_id, "ClientType"].sum()
-                        if new_status == "Waiting Approval":
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "ProofApprovalTime"
-                            ] = {self.today}
-                        elif new_status == "Machining (Not Processed)":
-                            self.jobs_df["Inv No"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                np.where(job_id == 0, new_inv, job_id),
-                                self.jobs_df["Inv No"],
-                            )
-                            self.jobs_df["TotalCost"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                total_cost,
-                                self.jobs_df["TotalCost"],
-                            )
-                            self.jobs_df["Material"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                material_change,
-                                self.jobs_df["Material"],
-                            )
-                            self.jobs_df["Size"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                size_change,
-                                self.jobs_df["Size"],
-                            )
-                            self.jobs_df["Proof"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                "Approved",
-                                self.jobs_df["Proof"],
-                            )
-                            if current_jobtype == "Artwork Only":
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == j_id,
-                                    "Delivered",
-                                    self.jobs_df["Status"],
-                                )
-                                self.jobs_df.loc[
-                                    self.jobs_df["id"] == j_id, "JobCompletedTime"
-                                ] = {self.today}
-                            else:
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == j_id,
-                                    new_status,
-                                    self.jobs_df["Status"],
-                                )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "ArtworkCompleteTime"
-                            ] = {self.today}
-                        elif new_status == "Machining (In Process)":
-                            self.jobs_df["MachineInUse"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                machine_choice,
-                                self.jobs_df["MachineInUse"],
-                            )
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "CNCStartTime"
-                            ] = {self.today}
-                        elif new_status == "At Finishing":
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "CNCCompleteTime"
-                            ] = {self.today}
-                        elif new_status == "Ready For QC":
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "FinishingCompleteTime"
-                            ] = {self.today}
-                        elif new_status == "Ready for Delivery":
-                            cod_current_status = self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "CODStatus"
-                            ].sum()
-                            if cod_current_status == "Not Paid":
-                                new_status = "Waiting payment (COD)"
+            btn_col1, btn_col2 = st.columns([0.5, 3])
+            with btn_col1:
+                submit_button = st.button("Update Status")
 
+            if submit_button:
+                for j_id in task_id:
+                    current_status = self.jobs_df.loc[
+                        self.jobs_df["id"] == j_id, "Status"
+                    ].sum()
+                    current_jobtype = self.jobs_df.loc[
+                        self.jobs_df["id"] == j_id, "JobType"
+                    ].sum()
+                    current_client_type = self.jobs_df.loc[self.jobs_df['id'] == j_id, "ClientType"].sum()
+                    if new_status == "Waiting Approval":
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "ProofApprovalTime"
+                        ] = {self.today}
+                    elif new_status == "Machining (Not Processed)":
+                        self.jobs_df["Inv No"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            np.where(job_id == 0, new_inv, job_id),
+                            self.jobs_df["Inv No"],
+                        )
+                        self.jobs_df["TotalCost"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            total_cost,
+                            self.jobs_df["TotalCost"],
+                        )
+                        self.jobs_df["Material"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            material_change,
+                            self.jobs_df["Material"],
+                        )
+                        self.jobs_df["Size"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            size_change,
+                            self.jobs_df["Size"],
+                        )
+                        self.jobs_df["Proof"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            "Approved",
+                            self.jobs_df["Proof"],
+                        )
+                        if current_jobtype == "Artwork Only":
                             self.jobs_df["Status"] = np.where(
                                 self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["Status"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "QCCompleteTime"
-                            ] = {self.today}
-
-                        elif new_status == "Paid":
-                            self.jobs_df["CODStatus"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
-                                self.jobs_df["CODStatus"],
-                            )
-                            self.jobs_df.loc[
-                                self.jobs_df["id"] == j_id, "CODPaymentTime"
-                            ] = {self.today}
-                            if current_status == "Waiting payment (COD)":
-                                new_status = "Ready for Delivery"
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == j_id,
-                                    new_status,
-                                    self.jobs_df["Status"],
-                                )
-
-                        elif new_status == "Delivered":
-                            self.jobs_df["Status"] = np.where(
-                                self.jobs_df["id"] == j_id,
-                                new_status,
+                                "Delivered",
                                 self.jobs_df["Status"],
                             )
                             self.jobs_df.loc[
                                 self.jobs_df["id"] == j_id, "JobCompletedTime"
                             ] = {self.today}
+                        else:
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == j_id,
+                                new_status,
+                                self.jobs_df["Status"],
+                            )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "ArtworkCompleteTime"
+                        ] = {self.today}
+                    elif new_status == "Machining (In Process)":
+                        self.jobs_df["MachineInUse"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            machine_choice,
+                            self.jobs_df["MachineInUse"],
+                        )
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "CNCStartTime"
+                        ] = {self.today}
+                    elif new_status == "At Finishing":
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "CNCCompleteTime"
+                        ] = {self.today}
+                    elif new_status == "Ready For QC":
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "FinishingCompleteTime"
+                        ] = {self.today}
+                    elif new_status == "Ready for Delivery":
+                        cod_current_status = self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "CODStatus"
+                        ].sum()
+                        if cod_current_status == "Not Paid":
+                            new_status = "Waiting payment (COD)"
+
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "QCCompleteTime"
+                        ] = {self.today}
+
+                    elif new_status == "Paid":
+                        self.jobs_df["CODStatus"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["CODStatus"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "CODPaymentTime"
+                        ] = {self.today}
+                        if current_status == "Waiting payment (COD)":
+                            new_status = "Ready for Delivery"
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == j_id,
+                                new_status,
+                                self.jobs_df["Status"],
+                            )
+
+                    elif new_status == "Delivered":
+                        self.jobs_df["Status"] = np.where(
+                            self.jobs_df["id"] == j_id,
+                            new_status,
+                            self.jobs_df["Status"],
+                        )
+                        self.jobs_df.loc[
+                            self.jobs_df["id"] == j_id, "JobCompletedTime"
+                        ] = {self.today}
+                    self.jobs_df = self.jobs_df.astype(str)
+                    sheet.update(
+                        [self.jobs_df.columns.values.tolist()]
+                        + self.jobs_df.values.tolist()
+                    )
+                st.success("Job has been updated")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
+
+            if new_status in (
+                "Artwork",
+                "Waiting Approval",
+                "Machining (Not Processed)",
+            ):
+                with btn_col2:
+                    delete_button = st.button("Delete Job")
+                if delete_button:
+                    for i_id in task_id:
+                        jobs_to_delete = self.jobs_df.loc[
+                            self.jobs_df["id"] == i_id
+                        ].index
+
+                        # Adjust index for Google Sheets (1-based indexing)
+                        rows_to_delete = [
+                            index + 2 for index in jobs_to_delete
+                        ]  # +2 to skip the header row
+
+                        # Delete rows in reverse order to avoid shifting issues
+                        for row in sorted(rows_to_delete, reverse=True):
+                            sheet.delete_rows(row)
+
+                    st.success("Job has been deleted")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+
+            if new_status in (
+                "At Finishing",
+                "Ready For QC",
+                "Ready for Delivery",
+                "Delivered",
+            ):
+                with btn_col2:
+                    reverse_button = st.button("Reverse Status")
+                if reverse_button:
+                    for i_id in task_id:
+                        if new_status == 'At Finishing':
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == i_id, "Machining (Not Processed)",
+                                self.jobs_df["Status"],
+                            )
+                        elif new_status == 'Ready For QC':
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == i_id, "Machining (In Process)",
+                                self.jobs_df["Status"],
+                            )
+                        elif new_status == 'Ready for Delivery':
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == i_id, "At Finishing",
+                                self.jobs_df["Status"],
+                            )
+                        elif new_status == 'Delivered':
+                            self.jobs_df["Status"] = np.where(
+                                self.jobs_df["id"] == i_id, "Ready For QC",
+                                self.jobs_df["Status"],
+                            )
                         self.jobs_df = self.jobs_df.astype(str)
                         sheet.update(
                             [self.jobs_df.columns.values.tolist()]
                             + self.jobs_df.values.tolist()
                         )
-                    st.success("Job has been updated")
+                    st.success("Job has been reversed")
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
-
-                if new_status in (
-                    "Artwork",
-                    "Waiting Approval",
-                    "Machining (Not Processed)",
-                ):
-                    with btn_col2:
-                        delete_button = st.form_submit_button(label="Delete Job")
-                    if delete_button:
-                        for i_id in task_id:
-                            jobs_to_delete = self.jobs_df.loc[
-                                self.jobs_df["id"] == i_id
-                            ].index
-
-                            # Adjust index for Google Sheets (1-based indexing)
-                            rows_to_delete = [
-                                index + 2 for index in jobs_to_delete
-                            ]  # +2 to skip the header row
-
-                            # Delete rows in reverse order to avoid shifting issues
-                            for row in sorted(rows_to_delete, reverse=True):
-                                sheet.delete_rows(row)
-
-                        st.success("Job has been deleted")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-
-                if new_status in (
-                    "At Finishing",
-                    "Ready For QC",
-                    "Ready for Delivery",
-                    "Delivered",
-                ):
-                    with btn_col2:
-                        reverse_button = st.form_submit_button(label="Reverse Status")
-                    if reverse_button:
-                        for i_id in task_id:
-                            if new_status == 'At Finishing':
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == i_id, "Machining (Not Processed)",
-                                    self.jobs_df["Status"],
-                                )
-                            elif new_status == 'Ready For QC':
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == i_id, "Machining (In Process)",
-                                    self.jobs_df["Status"],
-                                )
-                            elif new_status == 'Ready for Delivery':
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == i_id, "At Finishing",
-                                    self.jobs_df["Status"],
-                                )
-                            elif new_status == 'Delivered':
-                                self.jobs_df["Status"] = np.where(
-                                    self.jobs_df["id"] == i_id, "Ready For QC",
-                                    self.jobs_df["Status"],
-                                )
-                            self.jobs_df = self.jobs_df.astype(str)
-                            sheet.update(
-                                [self.jobs_df.columns.values.tolist()]
-                                + self.jobs_df.values.tolist()
-                            )
-                        st.success("Job has been reversed")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-                    
+                
 
     def add_job(self, fullname):
         # Add a new job
