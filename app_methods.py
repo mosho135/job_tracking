@@ -850,7 +850,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "ProofApprovalTime"
-                        ] = {self.today}
+                        ] = self.today
                     elif new_status == "Machining (Not Processed)":
                         self.jobs_df["Inv No"] = np.where(
                             self.jobs_df["id"] == j_id,
@@ -885,7 +885,7 @@ class Production:
                             )
                             self.jobs_df.loc[
                                 self.jobs_df["id"] == j_id, "JobCompletedTime"
-                            ] = {self.today}
+                            ] = self.today
                         else:
                             self.jobs_df["Status"] = np.where(
                                 self.jobs_df["id"] == j_id,
@@ -894,7 +894,7 @@ class Production:
                             )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "ArtworkCompleteTime"
-                        ] = {self.today}
+                        ] = self.today
                     elif new_status == "Machining (In Process)":
                         self.jobs_df["MachineInUse"] = np.where(
                             self.jobs_df["id"] == j_id,
@@ -908,7 +908,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "CNCStartTime"
-                        ] = {self.today}
+                        ] = self.today
                     elif new_status == "At Finishing":
                         self.jobs_df["Status"] = np.where(
                             self.jobs_df["id"] == j_id,
@@ -917,7 +917,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "CNCCompleteTime"
-                        ] = {self.today}
+                        ] = self.today
                     elif new_status == "Ready For QC":
                         self.jobs_df["Status"] = np.where(
                             self.jobs_df["id"] == j_id,
@@ -926,7 +926,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "FinishingCompleteTime"
-                        ] = {self.today}
+                        ] = self.today
                     elif new_status == "Ready for Delivery":
                         cod_current_status = self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "CODStatus"
@@ -941,7 +941,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "QCCompleteTime"
-                        ] = {self.today}
+                        ] = self.today
 
                     elif new_status == "Paid":
                         self.jobs_df["CODStatus"] = np.where(
@@ -951,7 +951,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "CODPaymentTime"
-                        ] = {self.today}
+                        ] = self.today
                         if current_status == "Waiting payment (COD)":
                             new_status = "Ready for Delivery"
                             self.jobs_df["Status"] = np.where(
@@ -968,7 +968,7 @@ class Production:
                         )
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "JobCompletedTime"
-                        ] = {self.today}
+                        ] = self.today
                     self.jobs_df = self.jobs_df.astype(str)
                     sheet.update(
                         [self.jobs_df.columns.values.tolist()]
