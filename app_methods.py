@@ -605,11 +605,10 @@ class Production:
                             for column in common_columns:
                                 self.jobs_df.loc[mask, column] = row[column]
 
-                    self.jobs_df = self.jobs_df.fillna("")
-                    self.jobs_df = self.jobs_df.astype(str)
+                    clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
                     sheet.update(
-                        [self.jobs_df.columns.values.tolist()]
-                        + self.jobs_df.values.tolist()
+                        [clean_df.columns.values.tolist()]
+                        + clean_df.values.tolist()
                     )
                     st.success("Updated")
                     st.cache_data.clear()
@@ -970,11 +969,10 @@ class Production:
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "JobCompletedTime"
                         ] = self.today
-                    self.jobs_df = self.jobs_df.fillna("")
-                    self.jobs_df = self.jobs_df.astype(str)
+                    clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
                     sheet.update(
-                        [self.jobs_df.columns.values.tolist()]
-                        + self.jobs_df.values.tolist()
+                        [clean_df.columns.values.tolist()]
+                        + clean_df.values.tolist()
                     )
                 st.success("Job has been updated")
                 st.cache_data.clear()
@@ -1038,11 +1036,10 @@ class Production:
                                 self.jobs_df["id"] == i_id, "Ready For QC",
                                 self.jobs_df["Status"],
                             )
-                        self.jobs_df = self.jobs_df.fillna("")
-                        self.jobs_df = self.jobs_df.astype(str)
+                        clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
                         sheet.update(
-                            [self.jobs_df.columns.values.tolist()]
-                            + self.jobs_df.values.tolist()
+                            [clean_df.columns.values.tolist()]
+                            + clean_df.values.tolist()
                         )
                     st.success("Job has been reversed")
                     st.cache_data.clear()
@@ -1127,10 +1124,10 @@ class Production:
             }
             new_job_df = pd.DataFrame(new_job)
             self.jobs_df = pd.concat([self.jobs_df, new_job_df], ignore_index=True)
-            self.jobs_df = self.jobs_df.fillna("")
-            self.jobs_df = self.jobs_df.astype(str)
+            clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
             sheet.update(
-                [self.jobs_df.columns.values.tolist()] + self.jobs_df.values.tolist()
+                [clean_df.columns.values.tolist()]
+                + clean_df.values.tolist()
             )
             # self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
             st.success(f"Job {wid} added!")
