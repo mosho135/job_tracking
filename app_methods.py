@@ -1,4 +1,5 @@
 import datetime as dt
+import math
 import time
 import pytz
 
@@ -66,6 +67,13 @@ class Production:
         from streamlit_extras.metric_cards import style_metric_cards
 
         self.format_data()
+
+        def clean_value(val):
+            if val is None:
+                return ""
+            if isinstance(val, float) and math.isnan(val):
+                return ""
+            return str(val)
 
         # TODO: Use the below functions to create the all button.
         def av_options(df, options):
@@ -605,10 +613,13 @@ class Production:
                             for column in common_columns:
                                 self.jobs_df.loc[mask, column] = row[column]
 
-                    clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
+                    clean_data = [
+                        [clean_value(cell) for cell in row]
+                        for row in self.jobs_df.values.tolist()
+                    ]
+
                     sheet.update(
-                        [clean_df.columns.values.tolist()]
-                        + clean_df.values.tolist()
+                        [self.jobs_df.columns.tolist()] + clean_data
                     )
                     st.success("Updated")
                     st.cache_data.clear()
@@ -742,6 +753,13 @@ class Production:
             self.update_job(delivery_jobs, "Delivered", "delivery_grid")
 
     def update_job(self, display_df, status_update, aggrid_key):
+
+        def clean_value(val):
+            if val is None:
+                return ""
+            if isinstance(val, float) and math.isnan(val):
+                return ""
+            return str(val)
 
         # Create grid options
         display_df['OverdueCheck'] = np.where(display_df['EstimatedDeliveryDate'] < self.today.strftime("%Y-%m-%d"), "Overdue", "NotDue")
@@ -969,10 +987,13 @@ class Production:
                         self.jobs_df.loc[
                             self.jobs_df["id"] == j_id, "JobCompletedTime"
                         ] = self.today
-                    clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
+                    clean_data = [
+                        [clean_value(cell) for cell in row]
+                        for row in self.jobs_df.values.tolist()
+                    ]
+
                     sheet.update(
-                        [clean_df.columns.values.tolist()]
-                        + clean_df.values.tolist()
+                        [self.jobs_df.columns.tolist()] + clean_data
                     )
                 st.success("Job has been updated")
                 st.cache_data.clear()
@@ -1036,10 +1057,13 @@ class Production:
                                 self.jobs_df["id"] == i_id, "Ready For QC",
                                 self.jobs_df["Status"],
                             )
-                        clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
+                        clean_data = [
+                            [clean_value(cell) for cell in row]
+                            for row in self.jobs_df.values.tolist()
+                        ]
+
                         sheet.update(
-                            [clean_df.columns.values.tolist()]
-                            + clean_df.values.tolist()
+                            [self.jobs_df.columns.tolist()] + clean_data
                         )
                     st.success("Job has been reversed")
                     st.cache_data.clear()
@@ -1048,6 +1072,14 @@ class Production:
                 
 
     def add_job(self, fullname):
+
+        def clean_value(val):
+            if val is None:
+                return ""
+            if isinstance(val, float) and math.isnan(val):
+                return ""
+            return str(val)
+
         # Add a new job
         st.subheader("Add New Job")
         fr_col1, fr_col2 = st.columns(2)
@@ -1124,10 +1156,13 @@ class Production:
             }
             new_job_df = pd.DataFrame(new_job)
             self.jobs_df = pd.concat([self.jobs_df, new_job_df], ignore_index=True)
-            clean_df = (self.jobs_df.where(pd.notnull(self.jobs_df), "").astype(str))
+            clean_data = [
+                [clean_value(cell) for cell in row]
+                for row in self.jobs_df.values.tolist()
+            ]
+
             sheet.update(
-                [clean_df.columns.values.tolist()]
-                + clean_df.values.tolist()
+                [self.jobs_df.columns.tolist()] + clean_data
             )
             # self.jobs_df.to_csv("foilwork_jobs.csv", index=False)
             st.success(f"Job {wid} added!")
