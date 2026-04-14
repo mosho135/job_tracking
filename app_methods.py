@@ -1130,9 +1130,10 @@ class Production:
 
         if st.button("Add Job"):
             self.format_data()
+            self.jobs_df["id"] = pd.to_numeric(self.jobs_df["id"])
             j_list = self.jobs_df["id"].unique().tolist()
             j_list.sort()
-            wid = j_list[-1] + 1
+            wid = int(j_list[-1]) + 1
 
             if client_type == "COD" and cod_status == "Not Applicable":
                 cod_status = "Not Paid"
