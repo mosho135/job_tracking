@@ -816,6 +816,7 @@ class Production:
                 current_inv = self.jobs_df.loc[
                     (self.jobs_df["Inv No"].notnull())
                 ].copy()
+                current_inv["Inv No"] = pd.to_numeric(current_inv["Inv No"])
                 num_list = current_inv["Inv No"].unique().tolist()
                 num_list.sort()
                 new_inv = int(num_list[-1]) + 1
