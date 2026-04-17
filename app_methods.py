@@ -1141,6 +1141,7 @@ class Production:
 
             new_job = {
                 "id": [wid],
+                "Inv No": [0],
                 "Client": [client],
                 "ClientType": [client_type],
                 "JobName": [jobname],
